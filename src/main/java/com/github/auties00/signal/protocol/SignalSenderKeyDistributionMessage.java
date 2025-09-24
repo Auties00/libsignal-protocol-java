@@ -1,11 +1,11 @@
 package com.github.auties00.signal.protocol;
 
+import com.github.auties00.signal.key.SignalIdentityPublicKey;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
 import it.auties.protobuf.stream.ProtobufInputStream;
 import it.auties.protobuf.stream.ProtobufOutputStream;
-import com.github.auties00.signal.key.SignalIdentityPublicKey;
 
 @ProtobufMessage
 public final class SignalSenderKeyDistributionMessage implements SignalCiphertextMessage {
@@ -52,7 +52,7 @@ public final class SignalSenderKeyDistributionMessage implements SignalCiphertex
 
     @Override
     public int version() {
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
 
@@ -62,7 +62,7 @@ public final class SignalSenderKeyDistributionMessage implements SignalCiphertex
     @Override
     public byte[] toSerialized() {
         var serialized = new byte[1 + SignalSenderKeyDistributionMessageSpec.sizeOf(this)];
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);

@@ -92,7 +92,7 @@ public final class SignalSenderKeyRecord {
 
         @Override
         public boolean add(SignalSenderKeyState senderKeyState) {
-            if(backing.size() == MAX_STATES) {
+            if (backing.size() == MAX_STATES) {
                 backing.pollLastEntry();
             }
             backing.putFirst(senderKeyState.id(), senderKeyState);

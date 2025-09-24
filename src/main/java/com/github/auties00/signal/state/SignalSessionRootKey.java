@@ -54,7 +54,7 @@ public final class SignalSessionRootKey {
 
     public Chain createChain(SignalIdentityPublicKey theirRatchetKey, SignalIdentityPrivateKey ourRatchetKey) {
         try {
-            var sharedSecret = Curve25519.sharedKey(theirRatchetKey.encodedPoint(), ourRatchetKey.encodedPoint());
+            var sharedSecret = Curve25519.sharedKey(theirRatchetKey.toEncodedPoint(), ourRatchetKey.toEncodedPoint());
             var senderParams = HKDFParameterSpec.ofExtract().addIKM(new SecretKeySpec(sharedSecret, "AES")).thenExpand("WhisperRatchet".getBytes(StandardCharsets.UTF_8), 64);
             var senderDerivedSecrets = kdf.deriveData(senderParams);
             var rootKeyData = SignalIdentityPublicKey.of(senderDerivedSecrets, 0, 32);

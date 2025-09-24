@@ -36,7 +36,7 @@ public final class SignalSenderMessageKey {
             this.seed = seed;
             this.iv = new IvParameterSpec(chunks, 0, 16);
             this.cipherKey = new SecretKeySpec(chunks, 16, 32, "AES");
-        }catch (GeneralSecurityException exception) {
+        } catch (GeneralSecurityException exception) {
             throw new RuntimeException(exception);
         }
     }

@@ -14,10 +14,10 @@ import it.auties.curve25519.Curve25519;
 import java.util.OptionalInt;
 
 public final class SignalSessionBuilder {
-    private final SignalStore store;
+    private final SignalDataStore store;
     private final SignalAddress remoteAddress;
 
-    public SignalSessionBuilder(SignalStore store, SignalAddress remoteAddress) {
+    public SignalSessionBuilder(SignalDataStore store, SignalAddress remoteAddress) {
         this.store = store;
         this.remoteAddress = remoteAddress;
     }
@@ -32,7 +32,7 @@ public final class SignalSessionBuilder {
     }
 
     private OptionalInt processV3(SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {
-        if (sessionRecord.hasSessionState(message.version(), message.baseKey().serialized())) {
+        if (sessionRecord.hasSessionState(message.version(), message.baseKey().toSerialized())) {
             return OptionalInt.empty();
         }
 
@@ -63,7 +63,7 @@ public final class SignalSessionBuilder {
         sessionRecord.sessionState()
                 .setRemoteRegistrationId(message.registrationId());
         sessionRecord.sessionState()
-                .setBaseKey(message.baseKey().serialized());
+                .setBaseKey(message.baseKey().toSerialized());
 
         return preKeyId == null ? OptionalInt.empty() : OptionalInt.of(preKeyId);
     }
@@ -78,8 +78,8 @@ public final class SignalSessionBuilder {
             throw new SecurityException("No signed prekey!");
         }
 
-        if (!Curve25519.verifySignature(preKey.identityKey().encodedPoint(),
-                theirSignedPreKey.serialized(),
+        if (!Curve25519.verifySignature(preKey.identityKey().toEncodedPoint(),
+                theirSignedPreKey.toSerialized(),
                 preKey.signedPreKeySignature())) {
             throw new SecurityException("Invalid signature on device key!");
         }
@@ -122,6 +122,6 @@ public final class SignalSessionBuilder {
         sessionRecord.sessionState()
                 .setRemoteRegistrationId(preKey.registrationId());
         sessionRecord.sessionState()
-                .setBaseKey(ourBaseKey.publicKey().serialized());
+                .setBaseKey(ourBaseKey.publicKey().toSerialized());
     }
 }

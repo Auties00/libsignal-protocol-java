@@ -23,11 +23,11 @@ import java.util.Objects;
 public final class SignalSessionCipher {
     private static final int MAX_MESSAGE_KEYS = 2000;
 
-    private final SignalStore keys;
+    private final SignalDataStore keys;
     private final SignalSessionBuilder sessionBuilder;
     private final SignalAddress remoteAddress;
 
-    public SignalSessionCipher(SignalStore store, SignalSessionBuilder sessionBuilder, SignalAddress remoteAddress) {
+    public SignalSessionCipher(SignalDataStore store, SignalSessionBuilder sessionBuilder, SignalAddress remoteAddress) {
         this.keys = store;
         this.sessionBuilder = sessionBuilder;
         this.remoteAddress = remoteAddress;
@@ -93,7 +93,9 @@ public final class SignalSessionCipher {
         var plaintext = decrypt(sessionRecord, ciphertext.signalMessage());
 
         if (unsignedPreKeyId.isPresent()) {
-            keys.removePreKey(unsignedPreKeyId.getAsInt());
+            if (!keys.removePreKey(unsignedPreKeyId.getAsInt())) {
+                throw new InternalError("Key was not removed");
+            }
         }
 
         return plaintext;
@@ -141,7 +143,7 @@ public final class SignalSessionCipher {
     }
 
     private byte[] decrypt(SignalSessionState sessionState, SignalMessage ciphertextMessage) {
-        if(sessionState.senderChain().isEmpty()) {
+        if (sessionState.senderChain().isEmpty()) {
             throw new IllegalStateException("Uninitialized session!");
         }
 

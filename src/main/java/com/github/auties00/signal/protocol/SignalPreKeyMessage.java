@@ -62,7 +62,7 @@ public final class SignalPreKeyMessage implements SignalCiphertextMessage {
 
     @Override
     public int version() {
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
 
@@ -72,7 +72,7 @@ public final class SignalPreKeyMessage implements SignalCiphertextMessage {
     @Override
     public byte[] toSerialized() {
         var serialized = new byte[1 + SignalPreKeyMessageSpec.sizeOf(this)];
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);

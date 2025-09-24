@@ -23,8 +23,8 @@ public record SignalSignedKeyPair(
 
     public static SignalSignedKeyPair of(int id, SignalIdentityKeyPair signatureKey) {
         var keypair = SignalIdentityKeyPair.random();
-        var privateKey = signatureKey.privateKey().encodedPoint();
-        var message = keypair.publicKey().serialized();
+        var privateKey = signatureKey.privateKey().toEncodedPoint();
+        var message = keypair.publicKey().toSerialized();
         var signature = Curve25519.sign(privateKey, message);
         return new SignalSignedKeyPair(id, keypair, signature);
     }

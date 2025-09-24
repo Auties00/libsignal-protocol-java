@@ -1,6 +1,7 @@
 package com.github.auties00.signal.protocol;
 
-public interface SignalCiphertextMessage {
+public sealed interface SignalCiphertextMessage
+        permits SignalMessage, SignalPreKeyMessage, SignalSenderKeyDistributionMessage, SignalSenderKeyMessage {
     int CURRENT_VERSION = 3;
 
     int WHISPER_TYPE = 2;
@@ -9,6 +10,8 @@ public interface SignalCiphertextMessage {
     int SENDER_KEY_DISTRIBUTION_TYPE = 5;
 
     int version();
+
     int type();
+
     byte[] toSerialized();
 }

@@ -7,14 +7,17 @@ import com.github.auties00.signal.state.SignalSessionRecord;
 
 import java.util.Optional;
 
-public interface SignalStore {
+public interface SignalDataStore {
     int localRegistrationId();
+
     SignalIdentityKeyPair localIdentityKeyPair();
 
     Optional<SignalSessionRecord> findSessionByAddress(SignalAddress remoteAddress);
+
     void addSession(SignalAddress remoteAddress, SignalSessionRecord record);
 
     Optional<SignalSenderKeyRecord> findSenderKeyByName(SignalSenderKeyName senderKeyName);
+
     void addSenderKey(SignalSenderKeyName senderKeyName, SignalSenderKeyRecord record);
 
     boolean hasTrust(SignalAddress remoteAddress, SignalIdentityPublicKey theirIdentityKey, SignalKeyDirection direction);
@@ -22,5 +25,6 @@ public interface SignalStore {
     Optional<SignalSignedKeyPair> findRemoteSignedKeyPairById(Integer id);
 
     Optional<SignalPreKeyPair> findLocalPreKeyById(Integer preKeyId);
+
     boolean removePreKey(int asInt);
 }

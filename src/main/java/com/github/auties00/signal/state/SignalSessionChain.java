@@ -2,11 +2,11 @@ package com.github.auties00.signal.state;
 
 import com.github.auties00.signal.key.SignalIdentityPrivateKey;
 import com.github.auties00.signal.key.SignalIdentityPublicKey;
+import com.github.auties00.signal.ratchet.SignalChainKey;
+import com.github.auties00.signal.ratchet.SignalMessageKey;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
-import com.github.auties00.signal.ratchet.SignalChainKey;
-import com.github.auties00.signal.ratchet.SignalMessageKey;
 
 import java.util.*;
 

@@ -1,13 +1,13 @@
 package com.github.auties00.signal.protocol;
 
 import com.github.auties00.signal.key.SignalIdentityPrivateKey;
+import com.github.auties00.signal.key.SignalIdentityPublicKey;
 import it.auties.curve25519.Curve25519;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
 import it.auties.protobuf.stream.ProtobufInputStream;
 import it.auties.protobuf.stream.ProtobufOutputStream;
-import com.github.auties00.signal.key.SignalIdentityPublicKey;
 
 import java.util.Arrays;
 
@@ -44,7 +44,7 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
         var serialized = new byte[1 + messageLength];
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);
         SignalSenderKeyMessageSpec.encode(this, ProtobufOutputStream.toBytes(serialized, 1));
-        this.signature = Curve25519.sign(signaturePrivateKey.encodedPoint(), serialized, null);
+        this.signature = Curve25519.sign(signaturePrivateKey.toEncodedPoint(), serialized, null);
     }
 
     public static SignalSenderKeyMessage ofSerialized(byte[] serialized) {
@@ -62,7 +62,7 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
 
     @Override
     public int version() {
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
 
@@ -73,12 +73,12 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
     public byte[] toSerialized() {
         var messageLength = SignalSenderKeyMessageSpec.sizeOf(this);
         var serialized = new byte[1 + messageLength + SIGNATURE_LENGTH];
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);
         SignalSenderKeyMessageSpec.encode(this, ProtobufOutputStream.toBytes(serialized, 1));
-        if(signature == null || signature.length != SIGNATURE_LENGTH) {
+        if (signature == null || signature.length != SIGNATURE_LENGTH) {
             throw new InternalError();
         }
         System.arraycopy(signature, 0, serialized, 1 + messageLength, signature.length);
@@ -86,17 +86,17 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
     }
 
     public boolean verifySignature(SignalIdentityPublicKey key) {
-        if(signature == null || signature.length != SIGNATURE_LENGTH) {
+        if (signature == null || signature.length != SIGNATURE_LENGTH) {
             throw new InternalError();
         }
         var messageLength = SignalSenderKeyMessageSpec.sizeOf(this);
         var serialized = new byte[1 + messageLength + SIGNATURE_LENGTH];
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);
         SignalSenderKeyMessageSpec.encode(this, ProtobufOutputStream.toBytes(serialized, 1));
-        return Curve25519.verifySignature(key.encodedPoint(), serialized, signature);
+        return Curve25519.verifySignature(key.toEncodedPoint(), serialized, signature);
     }
 
     public Integer id() {

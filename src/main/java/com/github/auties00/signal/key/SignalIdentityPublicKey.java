@@ -4,7 +4,6 @@ import it.auties.curve25519.Curve25519;
 import it.auties.protobuf.annotation.ProtobufDeserializer;
 import it.auties.protobuf.annotation.ProtobufSerializer;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -23,6 +22,10 @@ public final class SignalIdentityPublicKey implements SignalIdentityKey, Compara
         return KEY_LENGTH;
     }
 
+    public static int lengthWithType() {
+        return KEY_WITH_TYPE_LENGTH;
+    }
+
     private SignalIdentityPublicKey(byte[] point, int offset, int length) {
         Objects.requireNonNull(point, "key cannot be null");
         this.point = switch (length) {
@@ -39,7 +42,7 @@ public final class SignalIdentityPublicKey implements SignalIdentityKey, Compara
     }
 
     public static SignalIdentityPublicKey of(SignalIdentityPrivateKey privateKey) {
-        var publicKey = Curve25519.getPublicKey(privateKey.encodedPoint());
+        var publicKey = Curve25519.getPublicKey(privateKey.toEncodedPoint());
         return of(publicKey);
     }
 
@@ -52,27 +55,27 @@ public final class SignalIdentityPublicKey implements SignalIdentityKey, Compara
         return new SignalIdentityPublicKey(encodedPoint, offset, length);
     }
 
+    @Override
+    public byte[] toEncodedPoint() {
+        return point;
+    }
+
     @ProtobufSerializer
-    public byte[] serialized() {
+    public byte[] toSerialized() {
         var result = new byte[KEY_WITH_TYPE_LENGTH];
         result[0] = KEY_TYPE;
         System.arraycopy(point, 0, result, 1, KEY_LENGTH);
         return result;
     }
 
-    public int serialize(byte[] destination, int offset) {
-        destination[offset++] = KEY_TYPE;
+    @Override
+    public int writeEncodedPoint(byte[] destination, int offset) {
         System.arraycopy(point, 0, destination, offset, KEY_LENGTH);
         return offset + KEY_LENGTH;
     }
 
-    @Override
-    public byte[] encodedPoint() {
-        return point;
-    }
-
-    @Override
-    public int writePoint(byte[] destination, int offset) {
+    public int writeEncodedPointWithType(byte[] destination, int offset) {
+        destination[offset++] = KEY_TYPE;
         System.arraycopy(point, 0, destination, offset, KEY_LENGTH);
         return offset + KEY_LENGTH;
     }
@@ -94,10 +97,16 @@ public final class SignalIdentityPublicKey implements SignalIdentityKey, Compara
                 "point=" + Arrays.toString(point) + ']';
     }
 
-    // TODO: This is how libsignal does it but it doesn't make much sense to me
+    // libsignal compares the two points through BigInteger
+    // This approach is equivalent and doesn't require allocations
     @Override
     public int compareTo(SignalIdentityPublicKey o) {
-        return new BigInteger(point)
-                .compareTo(new BigInteger(o.point));
+        var aNeg = (point[0] & 0x80) != 0;
+        var bNeg = (o.point[0] & 0x80) != 0;
+        if (aNeg != bNeg) {
+            return aNeg ? -1 : 1;
+        }
+
+        return Arrays.compareUnsigned(point, o.point);
     }
 }

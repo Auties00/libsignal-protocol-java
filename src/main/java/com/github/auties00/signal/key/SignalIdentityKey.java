@@ -1,7 +1,7 @@
 package com.github.auties00.signal.key;
 
 public sealed interface SignalIdentityKey permits SignalIdentityPrivateKey, SignalIdentityPublicKey {
-    byte[] encodedPoint();
+    byte[] toEncodedPoint();
 
-    int writePoint(byte[] destination, int offset);
+    int writeEncodedPoint(byte[] destination, int offset);
 }

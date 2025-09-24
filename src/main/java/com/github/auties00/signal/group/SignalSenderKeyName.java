@@ -1,8 +1,8 @@
 package com.github.auties00.signal.group;
 
+import com.github.auties00.signal.SignalAddress;
 import it.auties.protobuf.annotation.ProtobufDeserializer;
 import it.auties.protobuf.annotation.ProtobufSerializer;
-import com.github.auties00.signal.SignalAddress;
 
 public record SignalSenderKeyName(String groupId, SignalAddress sender) {
     @ProtobufDeserializer

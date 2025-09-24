@@ -128,7 +128,7 @@ public final class SignalSessionState {
     }
 
     public void setSenderChain(SignalSessionChain chain) {
-       this.senderChain = chain;
+        this.senderChain = chain;
     }
 
     public Integer localRegistrationId() {

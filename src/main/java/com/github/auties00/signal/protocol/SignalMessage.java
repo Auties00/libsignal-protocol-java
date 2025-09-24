@@ -14,7 +14,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 
 @ProtobufMessage(name = "SignalMessage")
-public final class SignalMessage implements SignalCiphertextMessage{
+public final class SignalMessage implements SignalCiphertextMessage {
     private static final Integer MAC_LENGTH = 8;
 
     private Integer version;
@@ -67,7 +67,7 @@ public final class SignalMessage implements SignalCiphertextMessage{
 
     @Override
     public int version() {
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
 
@@ -78,12 +78,12 @@ public final class SignalMessage implements SignalCiphertextMessage{
     public byte[] toSerialized() {
         var messageLength = SignalMessageSpec.sizeOf(this);
         var serialized = new byte[1 + messageLength + MAC_LENGTH];
-        if(version == null) {
+        if (version == null) {
             throw new InternalError();
         }
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);
         SignalMessageSpec.encode(this, ProtobufOutputStream.toBytes(serialized, 1));
-        if(mac == null || mac.length != MAC_LENGTH) {
+        if (mac == null || mac.length != MAC_LENGTH) {
             throw new InternalError();
         }
         System.arraycopy(mac, 0, serialized, 1 + messageLength, mac.length);
@@ -91,7 +91,7 @@ public final class SignalMessage implements SignalCiphertextMessage{
     }
 
     public void verifyMac(SignalIdentityPublicKey senderIdentityPublicKey, SignalIdentityPublicKey receiverIdentityPublicKey, byte[] macKey) {
-        if(mac == null || mac.length != MAC_LENGTH) {
+        if (mac == null || mac.length != MAC_LENGTH) {
             throw new InternalError();
         }
         var theirMac = mac;
@@ -104,8 +104,8 @@ public final class SignalMessage implements SignalCiphertextMessage{
     private byte[] getMac(byte[] macKey, SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey) {
         try {
             var macInput = new byte[SignalIdentityPublicKey.length() + SignalIdentityPublicKey.length() + 1 + SignalMessageSpec.sizeOf(this)];
-            var offset = localIdentityKey.writePoint(macInput, 0);
-            offset = remoteIdentityKey.writePoint(macInput, SignalIdentityPublicKey.length());
+            var offset = localIdentityKey.writeEncodedPoint(macInput, 0);
+            offset = remoteIdentityKey.writeEncodedPoint(macInput, SignalIdentityPublicKey.length());
             macInput[offset++] = (byte) (version << 4 | CURRENT_VERSION);
             SignalMessageSpec.encode(this, ProtobufOutputStream.toBytes(macInput, offset));
 

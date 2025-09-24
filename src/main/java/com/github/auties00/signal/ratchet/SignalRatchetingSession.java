@@ -61,7 +61,7 @@ public final class SignalRatchetingSession {
                 offset = writeKeyAgreement(parameters.theirOneTimePreKey(), parameters.ourBaseKey().privateKey(), secrets, offset);
             }
 
-            if(offset != secrets.length) {
+            if (offset != secrets.length) {
                 throw new InternalError("Offset is not equal to the length of the array");
             }
 
@@ -112,7 +112,7 @@ public final class SignalRatchetingSession {
                 offset = writeKeyAgreement(parameters.theirBaseKey(), parameters.ourOneTimePreKey().privateKey(), secrets, offset);
             }
 
-            if(offset != secrets.length) {
+            if (offset != secrets.length) {
                 throw new InternalError("Offset is not equal to the length of the array");
             }
 
@@ -139,7 +139,7 @@ public final class SignalRatchetingSession {
     }
 
     private static int writeKeyAgreement(SignalIdentityPublicKey publicKey, SignalIdentityPrivateKey privateKey, byte[] output, int offset) {
-        Curve25519.sharedKey(publicKey.encodedPoint(), privateKey.encodedPoint(), output, offset);
+        Curve25519.sharedKey(publicKey.toEncodedPoint(), privateKey.toEncodedPoint(), output, offset);
         return offset + KEY_AGREEMENT_LENGTH;
     }
 

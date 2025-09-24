@@ -1,6 +1,6 @@
 package com.github.auties00.signal.group;
 
-import com.github.auties00.signal.SignalStore;
+import com.github.auties00.signal.SignalDataStore;
 import com.github.auties00.signal.group.ratchet.SignalSenderMessageKey;
 import com.github.auties00.signal.group.state.SignalSenderKeyRecord;
 import com.github.auties00.signal.group.state.SignalSenderKeyState;
@@ -15,16 +15,16 @@ import java.security.NoSuchAlgorithmException;
 public final class SignalGroupSessionCipher {
     private static final int MAX_MESSAGE_KEYS = 2000;
 
-    private final SignalStore store;
+    private final SignalDataStore store;
     private final SignalSenderKeyName senderKeyId;
     private final Cipher cipher;
 
-    public SignalGroupSessionCipher(SignalStore store, SignalSenderKeyName senderKeyId) {
+    public SignalGroupSessionCipher(SignalDataStore store, SignalSenderKeyName senderKeyId) {
         this.store = store;
         this.senderKeyId = senderKeyId;
         try {
             this.cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        }catch(NoSuchAlgorithmException | NoSuchPaddingException exception) {
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException exception) {
             throw new RuntimeException("Cannot initialize cipher", exception);
         }
     }
@@ -53,7 +53,7 @@ public final class SignalGroupSessionCipher {
             senderKeyState.setChainKey(senderKeyState.chainKey().next());
 
             return senderKeyMessage.toSerialized();
-        }catch (GeneralSecurityException exception) {
+        } catch (GeneralSecurityException exception) {
             throw new RuntimeException("Cannot encrypt message", exception);
         }
     }
@@ -80,7 +80,7 @@ public final class SignalGroupSessionCipher {
             var senderKey = getSenderKey(senderKeyState, senderKeyMessage.iteration());
             cipher.init(Cipher.DECRYPT_MODE, senderKey.cipherKey(), senderKey.iv());
             return cipher.doFinal(senderKeyMessage.cipherText());
-        }catch (GeneralSecurityException exception) {
+        } catch (GeneralSecurityException exception) {
             throw new RuntimeException("Cannot decrypt message", exception);
         }
     }

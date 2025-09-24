@@ -1,6 +1,6 @@
 package com.github.auties00.signal.group;
 
-import com.github.auties00.signal.SignalStore;
+import com.github.auties00.signal.SignalDataStore;
 import com.github.auties00.signal.group.state.SignalSenderKeyRecord;
 import com.github.auties00.signal.key.SignalIdentityKeyPair;
 import com.github.auties00.signal.protocol.SignalSenderKeyDistributionMessage;
@@ -10,9 +10,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 public final class SignalGroupSessionBuilder {
-    private final SignalStore store;
+    private final SignalDataStore store;
 
-    public SignalGroupSessionBuilder(SignalStore store) {
+    public SignalGroupSessionBuilder(SignalDataStore store) {
         this.store = store;
     }
 
@@ -65,7 +65,7 @@ public final class SignalGroupSessionBuilder {
     private static SecureRandom getSecureRandom() {
         try {
             return SecureRandom.getInstanceStrong();
-        }catch (NoSuchAlgorithmException exception) {
+        } catch (NoSuchAlgorithmException exception) {
             throw new AssertionError("No secure random algorithm", exception);
         }
     }

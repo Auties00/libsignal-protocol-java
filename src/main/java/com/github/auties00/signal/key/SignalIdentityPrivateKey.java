@@ -29,12 +29,12 @@ public record SignalIdentityPrivateKey(byte[] encodedPoint) implements SignalIde
 
     @ProtobufSerializer
     @Override
-    public byte[] encodedPoint() {
+    public byte[] toEncodedPoint() {
         return encodedPoint;
     }
 
     @Override
-    public int writePoint(byte[] destination, int offset) {
+    public int writeEncodedPoint(byte[] destination, int offset) {
         System.arraycopy(encodedPoint, 0, destination, offset, encodedPoint.length);
         return offset + length();
     }

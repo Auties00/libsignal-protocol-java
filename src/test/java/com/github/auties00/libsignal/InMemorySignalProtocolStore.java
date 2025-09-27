@@ -66,13 +66,11 @@ public class InMemorySignalProtocolStore implements SignalProtocolStore {
     }
 
     @Override
-    public boolean addTrustedIdentity(SignalProtocolAddress remoteAddress, SignalIdentityPublicKey identityKey) {
+    public void addTrustedIdentity(SignalProtocolAddress remoteAddress, SignalIdentityPublicKey identityKey) {
         var existing = trustedIdentities.get(remoteAddress);
         if (!identityKey.equals(existing)) {
             trustedIdentities.put(remoteAddress, identityKey);
-            return true;
         } else {
-            return false;
         }
     }
 

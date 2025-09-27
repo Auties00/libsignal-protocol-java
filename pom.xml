@@ -275,5 +275,16 @@
             <version>0.72.0</version>
             <scope>test</scope>
         </dependency>
+        <!--
+        The libsignal-client and libsignal-procol-java artifacts have the same base package, so some classes clash.
+        This jar is just libsignal-procol-java compiled with the classes relocated to archived.org.whispersystems.libsignal to be able to use both.
+        -->
+        <dependency>
+            <groupId>org.whispersystems</groupId>
+            <artifactId>signal-protocol-java</artifactId>
+            <version>2.8.1</version>
+            <systemPath>${project.basedir}/testDependencies/signal-protocol-java.jar</systemPath>
+            <scope>system</scope>
+        </dependency>
     </dependencies>
 </project>

@@ -25,5 +25,5 @@ public interface SignalProtocolStore {
     boolean removePreKey(int id);
 
     boolean isTrustedIdentity(SignalProtocolAddress remoteAddress, SignalIdentityPublicKey theirIdentityKey, SignalKeyDirection direction);
-    boolean addTrustedIdentity(SignalProtocolAddress remoteAddress, SignalIdentityPublicKey identityKey);
+    void addTrustedIdentity(SignalProtocolAddress remoteAddress, SignalIdentityPublicKey identityKey);
 }

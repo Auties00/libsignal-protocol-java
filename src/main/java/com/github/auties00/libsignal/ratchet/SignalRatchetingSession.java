@@ -1,13 +1,13 @@
 package com.github.auties00.libsignal.ratchet;
 
 import com.github.auties00.curve25519.Curve25519;
+import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import com.github.auties00.libsignal.state.SignalSessionChainBuilder;
 import com.github.auties00.libsignal.state.SignalSessionState;
-import com.github.auties00.libsignal.kdf.HKDF;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;

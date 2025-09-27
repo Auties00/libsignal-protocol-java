@@ -1,7 +1,5 @@
 package com.github.auties00.libsignal.state;
 
-import com.github.auties00.libsignal.groups.ratchet.SignalSenderMessageKey;
-import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.ratchet.SignalRootKey;
 import it.auties.protobuf.annotation.ProtobufMessage;

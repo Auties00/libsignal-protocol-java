@@ -1,9 +1,9 @@
 package com.github.auties00.libsignal.ratchet;
 
 import com.github.auties00.curve25519.Curve25519;
+import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
-import com.github.auties00.libsignal.kdf.HKDF;
 import it.auties.protobuf.annotation.ProtobufDeserializer;
 import it.auties.protobuf.annotation.ProtobufSerializer;
 

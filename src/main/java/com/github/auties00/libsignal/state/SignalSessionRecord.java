@@ -73,7 +73,9 @@ public final class SignalSessionRecord {
     }
 
     public void promoteState(SignalSessionState promotedState) {
-        this.previousStates.remove(promotedState);
+        if(!this.previousStates.remove(promotedState)) {
+            throw new IllegalStateException("Promoted state is not in the previous states");
+        }
         this.previousStates.addFirst(sessionState);
         this.sessionState = promotedState;
         if (previousStates.size() > ARCHIVED_STATES_MAX_LENGTH) {

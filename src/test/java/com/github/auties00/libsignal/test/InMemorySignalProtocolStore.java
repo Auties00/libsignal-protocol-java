@@ -7,7 +7,6 @@ import com.github.auties00.libsignal.groups.state.SignalSenderKeyRecord;
 import com.github.auties00.libsignal.key.*;
 import com.github.auties00.libsignal.state.SignalSessionRecord;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

@@ -2,14 +2,16 @@
 package com.github.auties00.libsignal.test;
 
 import com.github.auties00.curve25519.Curve25519;
-import com.github.auties00.libsignal.SignalSessionCipher;
-import com.github.auties00.libsignal.SignalSessionBuilder;
 import com.github.auties00.libsignal.SignalProtocolAddress;
 import com.github.auties00.libsignal.SignalProtocolStore;
-import com.github.auties00.libsignal.key.*;
+import com.github.auties00.libsignal.SignalSessionBuilder;
+import com.github.auties00.libsignal.SignalSessionCipher;
+import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
+import com.github.auties00.libsignal.key.SignalPreKeyPairBuilder;
+import com.github.auties00.libsignal.key.SignalSignedKeyPairBuilder;
 import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
-import com.github.auties00.libsignal.protocol.SignalPreKeyMessage;
 import com.github.auties00.libsignal.protocol.SignalMessage;
+import com.github.auties00.libsignal.protocol.SignalPreKeyMessage;
 import com.github.auties00.libsignal.state.SignalPreKeyBundle;
 import com.github.auties00.libsignal.state.SignalPreKeyBundleBuilder;
 import org.junit.jupiter.api.Test;
@@ -385,7 +387,6 @@ public class SignalSimultaneousInitiateTests {
             assertFalse(isSessionIdEqual(aliceStore, bobStore));
         }
 
-        System.out.print("");
         for (var i = 0; i < 50; i++) {
             var messageForBobRepeat = aliceSessionCipher.encrypt("hey there".getBytes());
             var messageForAliceRepeat = bobSessionCipher.encrypt("sample message".getBytes());

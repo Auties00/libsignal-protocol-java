@@ -19,8 +19,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 
 public final class SignalSessionCipher {
@@ -124,81 +122,81 @@ public final class SignalSessionCipher {
     }
 
     private byte[] decrypt(SignalSessionRecord sessionRecord, SignalMessage ciphertext) {
-        Throwable error;
         var errors = 0;
-
-        try {
-            var sessionState = sessionRecord.sessionState();
-            var plaintext = decrypt(sessionState, ciphertext);
-
-            sessionRecord.setState(sessionState);
-            return plaintext;
-        } catch (RuntimeException e) {
-            error = e;
-            errors++;
+        var currentSessionState = sessionRecord.sessionState();
+        var currentSessionResult = tryDecrypt(currentSessionState, ciphertext);
+        if(currentSessionResult != null) {
+            sessionRecord.setState(currentSessionState);
+            return currentSessionResult;
         }
+
+        errors++;
 
         for (var promotedState : sessionRecord.previousSessionStates()) {
-            // Store all the data that could change
-            var savedSessionVersion = promotedState.sessionVersion();
-            var savedLocalIdentityPublic = promotedState.localIdentityPublic();
-            var savedRemoteIdentityPublic = promotedState.remoteIdentityPublic();
-            var savedRootKey = promotedState.rootKey();
-            var savedPreviousCounter = promotedState.previousCounter();
-            var savedRemoteRegistrationId = promotedState.remoteRegistrationId();
-            var savedLocalRegistrationId = promotedState.localRegistrationId();
-            var savedNeedsRefresh = promotedState.needsRefresh();
-            var savedPendingKeyExchange = promotedState.pendingKeyExchange();
-            var savedPendingPreKey = promotedState.pendingPreKey().orElse(null);
-            var savedBaseKey = promotedState.baseKey() != null ? promotedState.baseKey().clone() : null;
-            var savedSenderChain = promotedState.senderChain().orElse(null);
-            var savedSenderChainKey = promotedState.senderChain().map(SignalSessionChain::chainKey).orElse(null);
-            var savedReceiverChains = new ArrayList<SignalSessionChain>();
-            var savedReceiverChainKeys = new ArrayList<SignalChainKey>();
-            var savedReceiverChainsMessageKeys = new ArrayList<ArrayList<SignalMessageKey>>();
-            for (var chain : promotedState.receiverChains()) {
-                savedReceiverChains.add(chain);
-                savedReceiverChainKeys.add(chain.chainKey());
-                savedReceiverChainsMessageKeys.add(new ArrayList<>(chain.messageKeys()));
-            }
-
-            try {
-                var plaintext = decrypt(promotedState, ciphertext);
+            var promotedStateResult = tryDecrypt(promotedState, ciphertext);
+            if(promotedStateResult != null) {
                 sessionRecord.promoteState(promotedState);
-                return plaintext;
-            } catch (RuntimeException e) {
-                // If an error happens, rollback
-                error = e;
-                errors++;
-                promotedState.setSessionVersion(savedSessionVersion);
-                promotedState.setLocalIdentityPublic(savedLocalIdentityPublic);
-                promotedState.setRemoteIdentityPublic(savedRemoteIdentityPublic);
-                promotedState.setRootKey(savedRootKey);
-                promotedState.setPreviousCounter(savedPreviousCounter);
-                promotedState.setRemoteRegistrationId(savedRemoteRegistrationId);
-                promotedState.setLocalRegistrationId(savedLocalRegistrationId);
-                promotedState.setNeedsRefresh(savedNeedsRefresh);
-                promotedState.setPendingKeyExchange(savedPendingKeyExchange);
-                promotedState.setPendingPreKey(savedPendingPreKey);
-                promotedState.setBaseKey(savedBaseKey);
-                if (savedSenderChain != null) {
-                    savedSenderChain.setChainKey(savedSenderChainKey);
-                }
-                promotedState.setSenderChain(savedSenderChain);
-                for (var i = 0; i < savedReceiverChains.size(); i++) {
-                    var chain = savedReceiverChains.get(i);
-
-                    var originalChainKey = savedReceiverChainKeys.get(i);
-                    chain.setChainKey(originalChainKey);
-
-                    var originalMessageKeysMap = savedReceiverChainsMessageKeys.get(i);
-                    chain.setMessageKeys(originalMessageKeysMap);
-                }
-                promotedState.setReceiverChains(savedReceiverChains);
+                return promotedStateResult;
             }
         }
 
-        throw new SecurityException("No valid sessions. Errors: " + errors, error);
+        throw new SecurityException("No valid sessions. Errors: " + errors);
+    }
+
+    private byte[] tryDecrypt(SignalSessionState state, SignalMessage ciphertext) {
+        // Store all the data that could change
+        var savedSessionVersion = state.sessionVersion();
+        var savedLocalIdentityPublic = state.localIdentityPublic();
+        var savedRemoteIdentityPublic = state.remoteIdentityPublic();
+        var savedRootKey = state.rootKey();
+        var savedPreviousCounter = state.previousCounter();
+        var savedRemoteRegistrationId = state.remoteRegistrationId();
+        var savedLocalRegistrationId = state.localRegistrationId();
+        var savedNeedsRefresh = state.needsRefresh();
+        var savedPendingKeyExchange = state.pendingKeyExchange();
+        var savedPendingPreKey = state.pendingPreKey().orElse(null);
+        var savedBaseKey = state.baseKey() != null ? state.baseKey().clone() : null;
+        var savedSenderChain = state.senderChain().orElse(null);
+        var savedSenderChainKey = state.senderChain().map(SignalSessionChain::chainKey).orElse(null);
+        var savedReceiverChains = new ArrayList<SignalSessionChain>();
+        var savedReceiverChainKeys = new ArrayList<SignalChainKey>();
+        var savedReceiverChainsMessageKeys = new ArrayList<ArrayList<SignalMessageKey>>();
+        for (var chain : state.receiverChains()) {
+            savedReceiverChains.add(chain);
+            savedReceiverChainKeys.add(chain.chainKey());
+            savedReceiverChainsMessageKeys.add(new ArrayList<>(chain.messageKeys()));
+        }
+
+        try {
+            return decrypt(state, ciphertext);
+        } catch (Throwable e) {
+            state.setSessionVersion(savedSessionVersion);
+            state.setLocalIdentityPublic(savedLocalIdentityPublic);
+            state.setRemoteIdentityPublic(savedRemoteIdentityPublic);
+            state.setRootKey(savedRootKey);
+            state.setPreviousCounter(savedPreviousCounter);
+            state.setRemoteRegistrationId(savedRemoteRegistrationId);
+            state.setLocalRegistrationId(savedLocalRegistrationId);
+            state.setNeedsRefresh(savedNeedsRefresh);
+            state.setPendingKeyExchange(savedPendingKeyExchange);
+            state.setPendingPreKey(savedPendingPreKey);
+            state.setBaseKey(savedBaseKey);
+            if (savedSenderChain != null) {
+                savedSenderChain.setChainKey(savedSenderChainKey);
+            }
+            state.setSenderChain(savedSenderChain);
+            for (var i = 0; i < savedReceiverChains.size(); i++) {
+                var chain = savedReceiverChains.get(i);
+
+                var originalChainKey = savedReceiverChainKeys.get(i);
+                chain.setChainKey(originalChainKey);
+
+                var originalMessageKeysMap = savedReceiverChainsMessageKeys.get(i);
+                chain.setMessageKeys(originalMessageKeysMap);
+            }
+            state.setReceiverChains(savedReceiverChains);
+            return null;
+        }
     }
 
     private byte[] decrypt(SignalSessionState sessionState, SignalMessage ciphertextMessage) {

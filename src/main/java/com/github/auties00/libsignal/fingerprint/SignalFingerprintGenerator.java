@@ -2,7 +2,6 @@ package com.github.auties00.libsignal.fingerprint;
 
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 
-import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;

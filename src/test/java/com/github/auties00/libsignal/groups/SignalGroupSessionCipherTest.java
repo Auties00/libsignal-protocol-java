@@ -1,11 +1,8 @@
-package com.github.auties00.libsignal.test.groups;
+package com.github.auties00.libsignal.groups;
 
 import com.github.auties00.libsignal.SignalProtocolAddress;
-import com.github.auties00.libsignal.groups.SignalGroupCipher;
-import com.github.auties00.libsignal.groups.SignalGroupSessionBuilder;
-import com.github.auties00.libsignal.groups.SignalSenderKeyName;
 import com.github.auties00.libsignal.protocol.SignalSenderKeyDistributionMessage;
-import com.github.auties00.libsignal.test.InMemorySignalProtocolStore;
+import com.github.auties00.libsignal.InMemorySignalProtocolStore;
 import org.junit.jupiter.api.Test;
 
 import java.security.NoSuchAlgorithmException;

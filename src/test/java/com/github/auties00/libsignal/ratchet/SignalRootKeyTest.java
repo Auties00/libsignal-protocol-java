@@ -1,10 +1,9 @@
-package com.github.auties00.libsignal.test.ratchet;
+package com.github.auties00.libsignal.ratchet;
 
 import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
-import com.github.auties00.libsignal.ratchet.SignalRootKey;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

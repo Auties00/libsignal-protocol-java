@@ -1,6 +1,5 @@
-package com.github.auties00.libsignal.test.kdf;
+package com.github.auties00.libsignal.kdf;
 
-import com.github.auties00.libsignal.kdf.HKDF;
 import org.junit.jupiter.api.Test;
 
 import java.security.InvalidKeyException;

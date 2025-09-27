@@ -1,7 +1,6 @@
-package com.github.auties00.libsignal.test.ratchet;
+package com.github.auties00.libsignal.ratchet;
 
 import com.github.auties00.libsignal.kdf.HKDF;
-import com.github.auties00.libsignal.ratchet.SignalChainKeyBuilder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

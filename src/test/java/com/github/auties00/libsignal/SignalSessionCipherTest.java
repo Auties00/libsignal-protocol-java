@@ -1,8 +1,5 @@
-package com.github.auties00.libsignal.test;
+package com.github.auties00.libsignal;
 
-import com.github.auties00.libsignal.SignalProtocolAddress;
-import com.github.auties00.libsignal.SignalSessionBuilder;
-import com.github.auties00.libsignal.SignalSessionCipher;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;

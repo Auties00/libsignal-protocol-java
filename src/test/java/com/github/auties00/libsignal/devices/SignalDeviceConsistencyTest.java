@@ -1,8 +1,5 @@
-package com.github.auties00.libsignal.test.devices;
+package com.github.auties00.libsignal.devices;
 
-import com.github.auties00.libsignal.devices.SignalDeviceConsistencyCodeGenerator;
-import com.github.auties00.libsignal.devices.SignalDeviceConsistencyCommitment;
-import com.github.auties00.libsignal.devices.SignalDeviceConsistencySignature;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.protocol.SignalDeviceConsistencyMessage;

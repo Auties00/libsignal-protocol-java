@@ -1,10 +1,12 @@
 /*
  I've left a lot of comments in the code to help explain the benchmarking process.
  Benchmarking is HARD.
+ Remember to run with --enable-native-access=ALL-UNNAMED
  */
 
 package com.github.auties00.libsignal;
 
+// My Java lib imports
 import com.github.auties00.curve25519.Curve25519;
 import com.github.auties00.libsignal.groups.SignalGroupCipher;
 import com.github.auties00.libsignal.groups.SignalGroupSessionBuilder;
@@ -16,18 +18,31 @@ import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import com.github.auties00.libsignal.protocol.SignalMessage;
 import com.github.auties00.libsignal.protocol.SignalPreKeyMessage;
 import com.github.auties00.libsignal.state.SignalPreKeyBundle;
+
+// Rust bindings lib imports
+import org.signal.libsignal.protocol.IdentityKeyPair;
+import org.signal.libsignal.protocol.SessionBuilder;
+import org.signal.libsignal.protocol.SessionCipher;
+import org.signal.libsignal.protocol.ecc.Curve;
+import org.signal.libsignal.protocol.groups.GroupCipher;
+import org.signal.libsignal.protocol.groups.GroupSessionBuilder;
+import org.signal.libsignal.protocol.message.CiphertextMessage;
+import org.signal.libsignal.protocol.message.PreKeySignalMessage;
+import org.signal.libsignal.protocol.state.PreKeyBundle;
+
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
 // All benchmarks should take at least 1 ms to be considered valid
-// This is because we are using @Setup(Level.Invocation) which requires all benchmarks to take at least 1 ms.
-// For the technical explanation on why, check it's Javadoc,
+// This is because we are using @Setup(Level.Invocation).
+// For the technical explanation on why, check the Javadoc for Setup,
 // but TLDR if the method takes a very short amount of time to execute,
 // we saturate the benchmark system with timestamp requests,
 // which introduce artificial latency, throughput, and scalability bottlenecks.
@@ -41,109 +56,113 @@ public class SignalCipherBenchmark {
     private static final byte[] SMALL_MESSAGE = "Hello, this is a typical text message".getBytes();
     private static final byte[] MEDIUM_MESSAGE = generateRandomMessage(1024); // 1KB
     private static final byte[] LARGE_MESSAGE = generateRandomMessage(64 * 1024); // 64KB
-    private static final byte[] MEGABYTE_MESSAGE = generateRandomMessage(1024 * 1024); // 1MB
+    private static final byte[] EXTRA_LARGE_MESSAGE = generateRandomMessage(1024 * 1024); // 1MB
+
+    // Recipients for groups
+    private static final SignalSenderKeyName newLibRecipient = new SignalSenderKeyName("benchmark_group", new SignalProtocolAddress("+14150001111", 1));
+    private static final UUID oldLibRecipient = UUID.randomUUID();
 
     private static byte[] generateRandomMessage(int size) {
-        byte[] message = new byte[size];
+        var message = new byte[size];
         new Random(42).nextBytes(message); // Deterministic for consistent benchmarks
         return message;
     }
 
-    // ================== SESSION CIPHER BENCHMARKS ==================
+    // ================== NEW LIB SIGNAL SESSION CIPHER BENCHMARKS ==================
 
     @State(Scope.Benchmark)
-    public static class SessionEncryptState {
+    public static class NewLibSessionEncryptState {
         SignalSessionCipher aliceSessionCipher;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             aliceSessionCipher = setupResult.aliceSessionCipher;
         }
     }
 
     @State(Scope.Benchmark)
-    public static class SessionDecryptSmallState {
+    public static class NewLibSessionDecryptSmallState {
         SignalSessionCipher bobSessionCipher;
         List<SignalCiphertextMessage> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             bobSessionCipher = setupResult.bobSessionCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
+            for (var i = 0; i < 100; i++) {
                 encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(SMALL_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class SessionDecryptMediumState {
+    public static class NewLibSessionDecryptMediumState {
         SignalSessionCipher bobSessionCipher;
         List<SignalCiphertextMessage> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             bobSessionCipher = setupResult.bobSessionCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
+            for (var i = 0; i < 100; i++) {
                 encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(MEDIUM_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class SessionDecryptLargeState {
+    public static class NewLibSessionDecryptLargeState {
         SignalSessionCipher bobSessionCipher;
         List<SignalCiphertextMessage> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             bobSessionCipher = setupResult.bobSessionCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
+            for (var i = 0; i < 100; i++) {
                 encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(LARGE_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class SessionDecryptMegabyteState {
+    public static class NewLibSessionDecryptExtraLargeState {
         SignalSessionCipher bobSessionCipher;
         List<SignalCiphertextMessage> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             bobSessionCipher = setupResult.bobSessionCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(MEGABYTE_MESSAGE));
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(EXTRA_LARGE_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class SessionCipherState {
+    public static class NewLibSessionCipherState {
         SignalSessionCipher aliceSessionCipher;
         SignalSessionCipher bobSessionCipher;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             aliceSessionCipher = setupResult.aliceSessionCipher;
             bobSessionCipher = setupResult.bobSessionCipher;
         }
     }
 
-    private static SessionCipherSetup setupSessionCiphers() {
+    private static NewLibSessionCipherSetup setupNewLibSessionCiphers() {
         // Initialize stores and addresses
         var aliceSessionStore = new InMemorySignalProtocolStore();
         var bobSessionStore = new InMemorySignalProtocolStore();
@@ -191,93 +210,93 @@ public class SignalCipherBenchmark {
         var aliceSessionCipher = new SignalSessionCipher(aliceSessionStore, aliceSessionBuilder, bobAddress);
         var bobSessionCipher = new SignalSessionCipher(bobSessionStore, bobSessionBuilder, aliceAddress);
 
-        return new SessionCipherSetup(aliceSessionCipher, bobSessionCipher);
+        return new NewLibSessionCipherSetup(aliceSessionCipher, bobSessionCipher);
     }
 
-    private static class SessionCipherSetup {
+    private static class NewLibSessionCipherSetup {
         final SignalSessionCipher aliceSessionCipher;
         final SignalSessionCipher bobSessionCipher;
 
-        SessionCipherSetup(SignalSessionCipher aliceSessionCipher, SignalSessionCipher bobSessionCipher) {
+        NewLibSessionCipherSetup(SignalSessionCipher aliceSessionCipher, SignalSessionCipher bobSessionCipher) {
             this.aliceSessionCipher = aliceSessionCipher;
             this.bobSessionCipher = bobSessionCipher;
         }
     }
 
     @Benchmark
-    public void sessionEncryptSmall(SessionEncryptState state, Blackhole bh) {
+    public void newLibSignalSessionEncryptSmall(NewLibSessionEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
+        for (var i = 0; i < 100; i++) {
             var encrypted = state.aliceSessionCipher.encrypt(SMALL_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void sessionEncryptMedium(SessionEncryptState state, Blackhole bh) {
+    public void newLibSignalSessionEncryptMedium(NewLibSessionEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
+        for (var i = 0; i < 100; i++) {
             var encrypted = state.aliceSessionCipher.encrypt(MEDIUM_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void sessionEncryptLarge(SessionEncryptState state, Blackhole bh) {
+    public void newLibSignalSessionEncryptLarge(NewLibSessionEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
+        for (var i = 0; i < 100; i++) {
             var encrypted = state.aliceSessionCipher.encrypt(LARGE_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void sessionEncryptMegabyte(SessionEncryptState state, Blackhole bh) {
+    public void newLibSignalSessionEncryptExtraLarge(NewLibSessionEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
-            var encrypted = state.aliceSessionCipher.encrypt(MEGABYTE_MESSAGE);
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceSessionCipher.encrypt(EXTRA_LARGE_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void sessionDecryptSmall(SessionDecryptSmallState state, Blackhole bh) {
+    public void newLibSignalSessionDecryptSmall(NewLibSessionDecryptSmallState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = decryptMessage(state.bobSessionCipher, encryptedMessage);
+            var decrypted = decryptNewLibMessage(state.bobSessionCipher, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void sessionDecryptMedium(SessionDecryptMediumState state, Blackhole bh) {
+    public void newLibSignalSessionDecryptMedium(NewLibSessionDecryptMediumState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = decryptMessage(state.bobSessionCipher, encryptedMessage);
+            var decrypted = decryptNewLibMessage(state.bobSessionCipher, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void sessionDecryptLarge(SessionDecryptLargeState state, Blackhole bh) {
+    public void newLibSignalSessionDecryptLarge(NewLibSessionDecryptLargeState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = decryptMessage(state.bobSessionCipher, encryptedMessage);
+            var decrypted = decryptNewLibMessage(state.bobSessionCipher, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void sessionDecryptMegabyte(SessionDecryptMegabyteState state, Blackhole bh) {
+    public void newLibSignalSessionDecryptExtraLarge(NewLibSessionDecryptExtraLargeState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = decryptMessage(state.bobSessionCipher, encryptedMessage);
+            var decrypted = decryptNewLibMessage(state.bobSessionCipher, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
-    // Helper method to handle both SignalMessage and SignalPreKeyMessage cases
-    private byte[] decryptMessage(SignalSessionCipher cipher, SignalCiphertextMessage message) {
+    // Helper method to handle both SignalMessage and SignalPreKeyMessage cases for new lib
+    private byte[] decryptNewLibMessage(SignalSessionCipher cipher, SignalCiphertextMessage message) {
         return switch (message) {
             case SignalPreKeyMessage preKeyMessage -> cipher.decrypt(preKeyMessage);
             case SignalMessage signalMessage -> cipher.decrypt(signalMessage);
@@ -285,101 +304,314 @@ public class SignalCipherBenchmark {
         };
     }
 
-    // ================== GROUP CIPHER BENCHMARKS - 2 PARTICIPANTS, ALICE and BOB ==================
+    // ================== OLD LIB SIGNAL SESSION CIPHER BENCHMARKS ==================
 
     @State(Scope.Benchmark)
-    public static class GroupEncryptState {
+    public static class OldLibSessionEncryptState {
+        SessionCipher aliceSessionCipher;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            aliceSessionCipher = setupResult.aliceSessionCipher;
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibSessionDecryptSmallState {
+        SessionCipher bobSessionCipher;
+        List<CiphertextMessage> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            bobSessionCipher = setupResult.bobSessionCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(SMALL_MESSAGE));
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibSessionDecryptMediumState {
+        SessionCipher bobSessionCipher;
+        List<CiphertextMessage> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            bobSessionCipher = setupResult.bobSessionCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(MEDIUM_MESSAGE));
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibSessionDecryptLargeState {
+        SessionCipher bobSessionCipher;
+        List<CiphertextMessage> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            bobSessionCipher = setupResult.bobSessionCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(LARGE_MESSAGE));
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibSessionDecryptExtraLargeState {
+        SessionCipher bobSessionCipher;
+        List<CiphertextMessage> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            bobSessionCipher = setupResult.bobSessionCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceSessionCipher.encrypt(EXTRA_LARGE_MESSAGE));
+            }
+        }
+    }
+
+    private static OldLibSessionCipherSetup setupOldLibSessionCiphers() throws Exception {
+        // Initialize stores and addresses
+        var aliceSessionStore = new org.signal.libsignal.protocol.state.impl.InMemorySignalProtocolStore(IdentityKeyPair.generate(), 5);
+        var bobSessionStore = new org.signal.libsignal.protocol.state.impl.InMemorySignalProtocolStore(IdentityKeyPair.generate(), 6);
+        var aliceAddress = new org.signal.libsignal.protocol.SignalProtocolAddress("+14159999999", 1);
+        var bobAddress = new org.signal.libsignal.protocol.SignalProtocolAddress("+14158888888", 1);
+
+        // Set up session builders
+        var aliceSessionBuilder = new SessionBuilder(aliceSessionStore, bobAddress);
+        var bobSessionBuilder = new SessionBuilder(bobSessionStore, aliceAddress);
+
+        // Create and process pre-key bundle (simulating initial key exchange)
+        var bobPreKeyPair = Curve.generateKeyPair();
+        var bobSignedPreKeyPair =  Curve.generateKeyPair();
+        var bobSignedPreKeySignature = bobSessionStore.getIdentityKeyPair().getPrivateKey()
+                .calculateSignature(bobSignedPreKeyPair.getPublicKey().serialize());
+
+        var bobPreKey = new PreKeyBundle(
+                bobSessionStore.getLocalRegistrationId(), 1,
+                31337, bobPreKeyPair.getPublicKey(),
+                22, bobSignedPreKeyPair.getPublicKey(),
+                bobSignedPreKeySignature,
+                bobSessionStore.getIdentityKeyPair().getPublicKey()
+        );
+
+        // Add keys to Bob's store
+        bobSessionStore.storePreKey(31337, new org.signal.libsignal.protocol.state.PreKeyRecord(31337, bobPreKeyPair));
+        bobSessionStore.storeSignedPreKey(22, new org.signal.libsignal.protocol.state.SignedPreKeyRecord(22, System.currentTimeMillis(), bobSignedPreKeyPair, bobSignedPreKeySignature));
+
+        // Process the bundle to establish session
+        aliceSessionBuilder.process(bobPreKey);
+
+        // Create ciphers
+        var aliceSessionCipher = new SessionCipher(aliceSessionStore, bobAddress);
+        var bobSessionCipher = new SessionCipher(bobSessionStore, aliceAddress);
+
+        return new OldLibSessionCipherSetup(aliceSessionCipher, bobSessionCipher);
+    }
+
+    private static class OldLibSessionCipherSetup {
+        final SessionCipher aliceSessionCipher;
+        final SessionCipher bobSessionCipher;
+
+        OldLibSessionCipherSetup(SessionCipher aliceSessionCipher, SessionCipher bobSessionCipher) {
+            this.aliceSessionCipher = aliceSessionCipher;
+            this.bobSessionCipher = bobSessionCipher;
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionEncryptSmall(OldLibSessionEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceSessionCipher.encrypt(SMALL_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionEncryptMedium(OldLibSessionEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceSessionCipher.encrypt(MEDIUM_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionEncryptLarge(OldLibSessionEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceSessionCipher.encrypt(LARGE_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionEncryptExtraLarge(OldLibSessionEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceSessionCipher.encrypt(EXTRA_LARGE_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionDecryptSmall(OldLibSessionDecryptSmallState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = decryptOldLibMessage(state.bobSessionCipher, encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionDecryptMedium(OldLibSessionDecryptMediumState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = decryptOldLibMessage(state.bobSessionCipher, encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionDecryptLarge(OldLibSessionDecryptLargeState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = decryptOldLibMessage(state.bobSessionCipher, encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionDecryptExtraLarge(OldLibSessionDecryptExtraLargeState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = decryptOldLibMessage(state.bobSessionCipher, encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    // Helper method to handle both OldSignalMessage and PreKeySignalMessage cases for old lib
+    private byte[] decryptOldLibMessage(SessionCipher cipher, CiphertextMessage message) throws Exception {
+        if (message.getType() == CiphertextMessage.PREKEY_TYPE) {
+            return cipher.decrypt(new PreKeySignalMessage(message.serialize()));
+        } else if (message.getType() == CiphertextMessage.WHISPER_TYPE) {
+            return cipher.decrypt(new org.signal.libsignal.protocol.message.SignalMessage(message.serialize()));
+        } else {
+            throw new IllegalArgumentException("Unsupported message type: " + message.getType());
+        }
+    }
+
+    // ================== NEW LIB SIGNAL GROUP CIPHER BENCHMARKS - 2 PARTICIPANTS, ALICE and BOB ==================
+
+    @State(Scope.Benchmark)
+    public static class NewLibGroupEncryptState {
         SignalGroupCipher aliceGroupCipher;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             aliceGroupCipher = setupResult.aliceGroupCipher;
         }
     }
 
     @State(Scope.Benchmark)
-    public static class GroupDecryptSmallState {
+    public static class NewLibGroupDecryptSmallState {
         SignalGroupCipher bobGroupCipher;
         List<byte[]> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             bobGroupCipher = setupResult.bobGroupCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(SMALL_MESSAGE));
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newLibRecipient, SMALL_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class GroupDecryptMediumState {
+    public static class NewLibGroupDecryptMediumState {
         SignalGroupCipher bobGroupCipher;
         List<byte[]> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             bobGroupCipher = setupResult.bobGroupCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(MEDIUM_MESSAGE));
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newLibRecipient, MEDIUM_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class GroupDecryptLargeState {
+    public static class NewLibGroupDecryptLargeState {
         SignalGroupCipher bobGroupCipher;
         List<byte[]> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             bobGroupCipher = setupResult.bobGroupCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(LARGE_MESSAGE));
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newLibRecipient, LARGE_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class GroupDecryptMegabyteState {
+    public static class NewLibGroupDecryptExtraLargeState {
         SignalGroupCipher bobGroupCipher;
         List<byte[]> encryptedMessages;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             bobGroupCipher = setupResult.bobGroupCipher;
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(MEGABYTE_MESSAGE));
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newLibRecipient, EXTRA_LARGE_MESSAGE));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class GroupCipherState {
+    public static class NewLibGroupCipherState {
         SignalGroupCipher aliceGroupCipher;
         SignalGroupCipher bobGroupCipher;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             aliceGroupCipher = setupResult.aliceGroupCipher;
             bobGroupCipher = setupResult.bobGroupCipher;
         }
     }
 
-    private static GroupCipherSetup setupGroupCiphers() {
+    private static NewLibGroupCipherSetup setupNewLibGroupCiphers() {
         // Initialize stores
         var aliceGroupStore = new InMemorySignalProtocolStore();
         var bobGroupStore = new InMemorySignalProtocolStore();
@@ -388,211 +620,299 @@ public class SignalCipherBenchmark {
         var aliceGroupSessionBuilder = new SignalGroupSessionBuilder(aliceGroupStore);
         var bobGroupSessionBuilder = new SignalGroupSessionBuilder(bobGroupStore);
 
-        // Create sender key name
-        var senderAddress = new SignalProtocolAddress("+14150001111", 1);
-        var groupSender = new SignalSenderKeyName("benchmark_group", senderAddress);
-
         // Set up group session
-        var aliceDistributionMessage = aliceGroupSessionBuilder.create(groupSender);
-        bobGroupSessionBuilder.process(groupSender, aliceDistributionMessage);
+        var aliceDistributionMessage = aliceGroupSessionBuilder.create(newLibRecipient);
+        bobGroupSessionBuilder.process(newLibRecipient, aliceDistributionMessage);
 
         // Create group ciphers
-        var aliceGroupCipher = new SignalGroupCipher(aliceGroupStore, groupSender);
-        var bobGroupCipher = new SignalGroupCipher(bobGroupStore, groupSender);
+        var aliceGroupCipher = new SignalGroupCipher(aliceGroupStore);
+        var bobGroupCipher = new SignalGroupCipher(bobGroupStore);
 
-        return new GroupCipherSetup(aliceGroupCipher, bobGroupCipher);
+        return new NewLibGroupCipherSetup(aliceGroupCipher, bobGroupCipher);
     }
 
-    private static class GroupCipherSetup {
+    private static class NewLibGroupCipherSetup {
         final SignalGroupCipher aliceGroupCipher;
         final SignalGroupCipher bobGroupCipher;
 
-        GroupCipherSetup(SignalGroupCipher aliceGroupCipher, SignalGroupCipher bobGroupCipher) {
+        NewLibGroupCipherSetup(SignalGroupCipher aliceGroupCipher, SignalGroupCipher bobGroupCipher) {
             this.aliceGroupCipher = aliceGroupCipher;
             this.bobGroupCipher = bobGroupCipher;
         }
     }
 
     @Benchmark
-    public void groupEncryptSmall(GroupEncryptState state, Blackhole bh) {
+    public void newLibSignalGroupEncryptSmall(NewLibGroupEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
-            var encrypted = state.aliceGroupCipher.encrypt(SMALL_MESSAGE);
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(newLibRecipient, SMALL_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void groupEncryptMedium(GroupEncryptState state, Blackhole bh) {
+    public void newLibSignalGroupEncryptMedium(NewLibGroupEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
-            var encrypted = state.aliceGroupCipher.encrypt(MEDIUM_MESSAGE);
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(newLibRecipient, MEDIUM_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void groupEncryptLarge(GroupEncryptState state, Blackhole bh) {
+    public void newLibSignalGroupEncryptLarge(NewLibGroupEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
-            var encrypted = state.aliceGroupCipher.encrypt(LARGE_MESSAGE);
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(newLibRecipient, LARGE_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void groupEncryptMegabyte(GroupEncryptState state, Blackhole bh) {
+    public void newLibSignalGroupEncryptExtraLarge(NewLibGroupEncryptState state, Blackhole bh) {
         // Encrypt 100 messages
-        for (int i = 0; i < 100; i++) {
-            var encrypted = state.aliceGroupCipher.encrypt(MEGABYTE_MESSAGE);
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(newLibRecipient, EXTRA_LARGE_MESSAGE);
             bh.consume(encrypted);
         }
     }
 
     @Benchmark
-    public void groupDecryptSmall(GroupDecryptSmallState state, Blackhole bh) {
+    public void newLibSignalGroupDecryptSmall(NewLibGroupDecryptSmallState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            var decrypted = state.bobGroupCipher.decrypt(newLibRecipient, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void groupDecryptMedium(GroupDecryptMediumState state, Blackhole bh) {
+    public void newLibSignalGroupDecryptMedium(NewLibGroupDecryptMediumState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            var decrypted = state.bobGroupCipher.decrypt(newLibRecipient, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void groupDecryptLarge(GroupDecryptLargeState state, Blackhole bh) {
+    public void newLibSignalGroupDecryptLarge(NewLibGroupDecryptLargeState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            var decrypted = state.bobGroupCipher.decrypt(newLibRecipient, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void groupDecryptMegabyte(GroupDecryptMegabyteState state, Blackhole bh) {
+    public void newLibSignalGroupDecryptExtraLarge(NewLibGroupDecryptExtraLargeState state, Blackhole bh) {
         // Decrypt 100 messages
         for (var encryptedMessage : state.encryptedMessages) {
-            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            var decrypted = state.bobGroupCipher.decrypt(newLibRecipient, encryptedMessage);
             bh.consume(decrypted);
         }
     }
 
-    // ================== GROUP CIPHER BENCHMARKS - 2048 PARTICIPANTS, ALICE and ... ==================
+    // ================== OLD LIB SIGNAL GROUP CIPHER BENCHMARKS - 2 PARTICIPANTS, ALICE and BOB ==================
 
     @State(Scope.Benchmark)
-    public static class LargeGroupState {
-        SignalGroupCipher aliceGroupCipher;
-        List<SignalGroupCipher> recipientGroupCiphers;
+    public static class OldLibGroupEncryptState {
+        GroupCipher aliceGroupCipher;
 
         @Setup(Level.Invocation)
-        public void setupLargeGroupCipher() {
-            var setupResult = setupLargeGroupCiphers();
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
             aliceGroupCipher = setupResult.aliceGroupCipher;
-            recipientGroupCiphers = setupResult.recipientGroupCiphers;
         }
     }
-
-    private static LargeGroupCipherSetup setupLargeGroupCiphers() {
-        // Initialize Alice's store
-        var aliceGroupStore = new InMemorySignalProtocolStore();
-        var aliceGroupSessionBuilder = new SignalGroupSessionBuilder(aliceGroupStore);
-
-        // Create sender key name with Alice as the sender
-        var aliceAddress = new SignalProtocolAddress("+14150001111", 1);
-        var groupSender = new SignalSenderKeyName("large_group_2047", aliceAddress);
-
-        // Create Alice's group cipher and distribution message
-        var aliceDistributionMessage = aliceGroupSessionBuilder.create(groupSender);
-        var aliceGroupCipher = new SignalGroupCipher(aliceGroupStore, groupSender);
-
-        // Create 2047 recipient group ciphers
-        var recipientGroupCiphers = new ArrayList<SignalGroupCipher>(2047);
-        for (int i = 1; i <= 2047; i++) {
-            var recipientStore = new InMemorySignalProtocolStore();
-            var recipientGroupSessionBuilder = new SignalGroupSessionBuilder(recipientStore);
-
-            // Process Alice's distribution message
-            recipientGroupSessionBuilder.process(groupSender, aliceDistributionMessage);
-
-            // Create recipient's group cipher
-            var recipientGroupCipher = new SignalGroupCipher(recipientStore, groupSender);
-            recipientGroupCiphers.add(recipientGroupCipher);
-        }
-
-        return new LargeGroupCipherSetup(aliceGroupCipher, recipientGroupCiphers);
-    }
-
-    private static class LargeGroupCipherSetup {
-        final SignalGroupCipher aliceGroupCipher;
-        final List<SignalGroupCipher> recipientGroupCiphers;
-
-        LargeGroupCipherSetup(SignalGroupCipher aliceGroupCipher, List<SignalGroupCipher> recipientGroupCiphers) {
-            this.aliceGroupCipher = aliceGroupCipher;
-            this.recipientGroupCiphers = recipientGroupCiphers;
-        }
-    }
-
-    @Benchmark
-    public void largeGroupBroadcastSmall(LargeGroupState state, Blackhole bh) {
-        // Alice encrypts a small message once
-        var encryptedMessage = state.aliceGroupCipher.encrypt(SMALL_MESSAGE);
-        bh.consume(encryptedMessage);
-
-        // All 2047 recipients decrypt the same message
-        for (var recipientCipher : state.recipientGroupCiphers) {
-            var decrypted = recipientCipher.decrypt(encryptedMessage);
-            bh.consume(decrypted);
-        }
-    }
-
-    @Benchmark
-    public void largeGroupBroadcastMedium(LargeGroupState state, Blackhole bh) {
-        // Alice encrypts a medium message once
-        var encryptedMessage = state.aliceGroupCipher.encrypt(MEDIUM_MESSAGE);
-        bh.consume(encryptedMessage);
-
-        // All 2047 recipients decrypt the same message
-        for (var recipientCipher : state.recipientGroupCiphers) {
-            var decrypted = recipientCipher.decrypt(encryptedMessage);
-            bh.consume(decrypted);
-        }
-    }
-
-    @Benchmark
-    public void largeGroupBroadcastLarge(LargeGroupState state, Blackhole bh) {
-        // Alice encrypts a large message once
-        var encryptedMessage = state.aliceGroupCipher.encrypt(LARGE_MESSAGE);
-        bh.consume(encryptedMessage);
-
-        // All 2047 recipients decrypt the same message
-        for (var recipientCipher : state.recipientGroupCiphers) {
-            var decrypted = recipientCipher.decrypt(encryptedMessage);
-            bh.consume(decrypted);
-        }
-    }
-
-    // ================== EDGE CASE BENCHMARKS ==================
 
     @State(Scope.Benchmark)
-    public static class SessionOutOfOrderState {
+    public static class OldLibGroupDecryptSmallState {
+        GroupCipher bobGroupCipher;
+        List<byte[]> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
+            bobGroupCipher = setupResult.bobGroupCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(oldLibRecipient, SMALL_MESSAGE).serialize());
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibGroupDecryptMediumState {
+        GroupCipher bobGroupCipher;
+        List<byte[]> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
+            bobGroupCipher = setupResult.bobGroupCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(oldLibRecipient, MEDIUM_MESSAGE).serialize());
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibGroupDecryptLargeState {
+        GroupCipher bobGroupCipher;
+        List<byte[]> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
+            bobGroupCipher = setupResult.bobGroupCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(oldLibRecipient, LARGE_MESSAGE).serialize());
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibGroupDecryptExtraLargeState {
+        GroupCipher bobGroupCipher;
+        List<byte[]> encryptedMessages;
+
+        @Setup(Level.Invocation)
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
+            bobGroupCipher = setupResult.bobGroupCipher;
+            encryptedMessages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(oldLibRecipient, EXTRA_LARGE_MESSAGE).serialize());
+            }
+        }
+    }
+
+    private static OldLibGroupCipherSetup setupOldLibGroupCiphers() {
+        // Initialize stores
+        var aliceGroupStore = new org.signal.libsignal.protocol.state.impl.InMemorySignalProtocolStore(IdentityKeyPair.generate(), 5);
+        var bobGroupStore = new org.signal.libsignal.protocol.state.impl.InMemorySignalProtocolStore(IdentityKeyPair.generate(), 6);
+
+        // Create group session builders
+        var aliceGroupSessionBuilder = new GroupSessionBuilder(aliceGroupStore);
+        var bobGroupSessionBuilder = new GroupSessionBuilder(bobGroupStore);
+
+        // Create sender key name
+        var senderAddress = new org.signal.libsignal.protocol.SignalProtocolAddress("+14150001111", 1);
+
+        // Set up group session
+        var aliceDistributionMessage = aliceGroupSessionBuilder.create(senderAddress, oldLibRecipient);
+        bobGroupSessionBuilder.process(senderAddress, aliceDistributionMessage);
+
+        // Create group ciphers
+        var aliceGroupCipher = new GroupCipher(aliceGroupStore, senderAddress);
+        var bobGroupCipher = new GroupCipher(bobGroupStore, senderAddress);
+
+        return new OldLibGroupCipherSetup(aliceGroupCipher, bobGroupCipher);
+    }
+
+    private static class OldLibGroupCipherSetup {
+        final GroupCipher aliceGroupCipher;
+        final GroupCipher bobGroupCipher;
+
+        OldLibGroupCipherSetup(GroupCipher aliceGroupCipher, GroupCipher bobGroupCipher) {
+            this.aliceGroupCipher = aliceGroupCipher;
+            this.bobGroupCipher = bobGroupCipher;
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupEncryptSmall(OldLibGroupEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(oldLibRecipient, SMALL_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupEncryptMedium(OldLibGroupEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(oldLibRecipient, MEDIUM_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupEncryptLarge(OldLibGroupEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(oldLibRecipient, LARGE_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupEncryptExtraLarge(OldLibGroupEncryptState state, Blackhole bh) throws Exception {
+        // Encrypt 100 messages
+        for (var i = 0; i < 100; i++) {
+            var encrypted = state.aliceGroupCipher.encrypt(oldLibRecipient, EXTRA_LARGE_MESSAGE);
+            bh.consume(encrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupDecryptSmall(OldLibGroupDecryptSmallState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupDecryptMedium(OldLibGroupDecryptMediumState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupDecryptLarge(OldLibGroupDecryptLargeState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupDecryptExtraLarge(OldLibGroupDecryptExtraLargeState state, Blackhole bh) throws Exception {
+        // Decrypt 100 messages
+        for (var encryptedMessage : state.encryptedMessages) {
+            var decrypted = state.bobGroupCipher.decrypt(encryptedMessage);
+            bh.consume(decrypted);
+        }
+    }
+
+    // ================== NEW LIB SIGNAL EDGE CASE BENCHMARKS ==================
+
+    @State(Scope.Benchmark)
+    public static class NewLibSessionOutOfOrderState {
         SignalSessionCipher bobSessionCipher;
         List<SignalCiphertextMessage> messages;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             bobSessionCipher = setupResult.bobSessionCipher;
             messages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
+            for (var i = 0; i < 100; i++) {
                 var encrypted = setupResult.aliceSessionCipher.encrypt(("Out of order message " + i).getBytes());
                 messages.add(encrypted);
             }
@@ -600,33 +920,33 @@ public class SignalCipherBenchmark {
     }
 
     @State(Scope.Benchmark)
-    public static class GroupOutOfOrderState {
+    public static class NewLibGroupOutOfOrderState {
         SignalGroupCipher bobGroupCipher;
         List<byte[]> messages;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             bobGroupCipher = setupResult.bobGroupCipher;
             messages = new ArrayList<>();
             // Prepare 100 encrypted messages
-            for (int i = 0; i < 100; i++) {
-                messages.add(setupResult.aliceGroupCipher.encrypt(("Out of order message " + i).getBytes()));
+            for (var i = 0; i < 100; i++) {
+                messages.add(setupResult.aliceGroupCipher.encrypt(newLibRecipient, ("Out of order message " + i).getBytes()));
             }
         }
     }
 
     @State(Scope.Benchmark)
-    public static class SessionMessageKeyLimitStressState {
+    public static class NewLibSessionMessageKeyLimitStressState {
         SignalSessionCipher bobSessionCipher;
         List<SignalCiphertextMessage> messages;
 
         @Setup(Level.Invocation)
         public void setupSessionCipher() {
-            var setupResult = setupSessionCiphers();
+            var setupResult = setupNewLibSessionCiphers();
             bobSessionCipher = setupResult.bobSessionCipher;
             messages = new ArrayList<>();
-            for (int i = 0; i < 2000; i++) {
+            for (var i = 0; i < 2000; i++) {
                 var encrypted = setupResult.aliceSessionCipher.encrypt(("stress test " + i).getBytes());
                 messages.add(encrypted);
             }
@@ -634,53 +954,160 @@ public class SignalCipherBenchmark {
     }
 
     @State(Scope.Benchmark)
-    public static class GroupMessageKeyLimitStressState {
+    public static class NewLibGroupMessageKeyLimitStressState {
         SignalGroupCipher bobGroupCipher;
         List<byte[]> messages;
 
         @Setup(Level.Invocation)
         public void setupGroupCipher() {
-            var setupResult = setupGroupCiphers();
+            var setupResult = setupNewLibGroupCiphers();
             bobGroupCipher = setupResult.bobGroupCipher;
             messages = new ArrayList<>();
             // Create many messages to test message key limits
-            for (int i = 0; i < 2000; i++) {
-                messages.add(setupResult.aliceGroupCipher.encrypt(("stress test " + i).getBytes()));
+            for (var i = 0; i < 2000; i++) {
+                messages.add(setupResult.aliceGroupCipher.encrypt(newLibRecipient, ("stress test " + i).getBytes()));
             }
         }
     }
 
     @Benchmark
-    public void sessionOutOfOrderDecrypt(SessionOutOfOrderState state, Blackhole bh) {
+    public void newLibSignalSessionOutOfOrderDecrypt(NewLibSessionOutOfOrderState state, Blackhole bh) {
         // Decrypt messages in reverse order (simulating out-of-order delivery)
-        for (int i = state.messages.size() - 1; i >= 0; i--) {
-            var decrypted = decryptMessage(state.bobSessionCipher, state.messages.get(i));
+        for (var i = state.messages.size() - 1; i >= 0; i--) {
+            var decrypted = decryptNewLibMessage(state.bobSessionCipher, state.messages.get(i));
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void groupOutOfOrderDecrypt(GroupOutOfOrderState state, Blackhole bh) {
+    public void newLibSignalGroupOutOfOrderDecrypt(NewLibGroupOutOfOrderState state, Blackhole bh) {
         // Decrypt messages in reverse order (simulating out-of-order delivery)
-        for (int i = state.messages.size() - 1; i >= 0; i--) {
+        for (var i = state.messages.size() - 1; i >= 0; i--) {
+            var decrypted = state.bobGroupCipher.decrypt(newLibRecipient, state.messages.get(i));
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void newLibSignalSessionMessageKeyLimitStress(NewLibSessionMessageKeyLimitStressState state, Blackhole bh) {
+        // Decrypt every 10th message to create gaps
+        for (var i = 0; i < state.messages.size(); i += 10) {
+            var decrypted = decryptNewLibMessage(state.bobSessionCipher, state.messages.get(i));
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void newLibSignalGroupMessageKeyLimitStress(NewLibGroupMessageKeyLimitStressState state, Blackhole bh) {
+        // Decrypt every 10th message to create gaps
+        for (var i = 0; i < state.messages.size(); i += 10) {
+            var decrypted = state.bobGroupCipher.decrypt(newLibRecipient, state.messages.get(i));
+            bh.consume(decrypted);
+        }
+    }
+
+    // ================== OLD LIB SIGNAL EDGE CASE BENCHMARKS ==================
+
+    @State(Scope.Benchmark)
+    public static class OldLibSessionOutOfOrderState {
+        SessionCipher bobSessionCipher;
+        List<CiphertextMessage> messages;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            bobSessionCipher = setupResult.bobSessionCipher;
+            messages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                var encrypted = setupResult.aliceSessionCipher.encrypt(("Out of order message " + i).getBytes());
+                messages.add(encrypted);
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibGroupOutOfOrderState {
+        GroupCipher bobGroupCipher;
+        List<byte[]> messages;
+
+        @Setup(Level.Invocation)
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
+            bobGroupCipher = setupResult.bobGroupCipher;
+            messages = new ArrayList<>();
+            // Prepare 100 encrypted messages
+            for (var i = 0; i < 100; i++) {
+                messages.add(setupResult.aliceGroupCipher.encrypt(oldLibRecipient, ("Out of order message " + i).getBytes()).serialize());
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibSessionMessageKeyLimitStressState {
+        SessionCipher bobSessionCipher;
+        List<CiphertextMessage> messages;
+
+        @Setup(Level.Invocation)
+        public void setupSessionCipher() throws Exception {
+            var setupResult = setupOldLibSessionCiphers();
+            bobSessionCipher = setupResult.bobSessionCipher;
+            messages = new ArrayList<>();
+            for (var i = 0; i < 2000; i++) {
+                var encrypted = setupResult.aliceSessionCipher.encrypt(("stress test " + i).getBytes());
+                messages.add(encrypted);
+            }
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class OldLibGroupMessageKeyLimitStressState {
+        GroupCipher bobGroupCipher;
+        List<byte[]> messages;
+
+        @Setup(Level.Invocation)
+        public void setupGroupCipher() throws Exception {
+            var setupResult = setupOldLibGroupCiphers();
+            bobGroupCipher = setupResult.bobGroupCipher;
+            messages = new ArrayList<>();
+            // Create many messages to test message key limits
+            for (var i = 0; i < 2000; i++) {
+                messages.add(setupResult.aliceGroupCipher.encrypt(oldLibRecipient, ("stress test " + i).getBytes()).serialize());
+            }
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalSessionOutOfOrderDecrypt(OldLibSessionOutOfOrderState state, Blackhole bh) throws Exception {
+        // Decrypt messages in reverse order (simulating out-of-order delivery)
+        for (var i = state.messages.size() - 1; i >= 0; i--) {
+            var decrypted = decryptOldLibMessage(state.bobSessionCipher, state.messages.get(i));
+            bh.consume(decrypted);
+        }
+    }
+
+    @Benchmark
+    public void oldLibSignalGroupOutOfOrderDecrypt(OldLibGroupOutOfOrderState state, Blackhole bh) throws Exception {
+        // Decrypt messages in reverse order (simulating out-of-order delivery)
+        for (var i = state.messages.size() - 1; i >= 0; i--) {
             var decrypted = state.bobGroupCipher.decrypt(state.messages.get(i));
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void sessionMessageKeyLimitStress(SessionMessageKeyLimitStressState state, Blackhole bh) {
+    public void oldLibSignalSessionMessageKeyLimitStress(OldLibSessionMessageKeyLimitStressState state, Blackhole bh) throws Exception {
         // Decrypt every 10th message to create gaps
-        for (int i = 0; i < state.messages.size(); i += 10) {
-            var decrypted = decryptMessage(state.bobSessionCipher, state.messages.get(i));
+        for (var i = 0; i < state.messages.size(); i += 10) {
+            var decrypted = decryptOldLibMessage(state.bobSessionCipher, state.messages.get(i));
             bh.consume(decrypted);
         }
     }
 
     @Benchmark
-    public void groupMessageKeyLimitStress(GroupMessageKeyLimitStressState state, Blackhole bh) {
+    public void oldLibSignalGroupMessageKeyLimitStress(OldLibGroupMessageKeyLimitStressState state, Blackhole bh) throws Exception {
         // Decrypt every 10th message to create gaps
-        for (int i = 0; i < state.messages.size(); i += 10) {
+        for (var i = 0; i < state.messages.size(); i += 10) {
             var decrypted = state.bobGroupCipher.decrypt(state.messages.get(i));
             bh.consume(decrypted);
         }

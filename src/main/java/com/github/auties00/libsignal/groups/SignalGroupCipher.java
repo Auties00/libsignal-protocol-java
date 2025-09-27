@@ -17,12 +17,10 @@ public final class SignalGroupCipher {
     private static final int MAX_MESSAGE_KEYS = 2000;
 
     private final SignalProtocolStore store;
-    private final SignalSenderKeyName senderKeyId;
     private final Cipher cipher;
 
-    public SignalGroupCipher(SignalProtocolStore store, SignalSenderKeyName senderKeyId) {
+    public SignalGroupCipher(SignalProtocolStore store) {
         this.store = store;
-        this.senderKeyId = senderKeyId;
         try {
             this.cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         } catch (NoSuchAlgorithmException | NoSuchPaddingException exception) {
@@ -30,7 +28,7 @@ public final class SignalGroupCipher {
         }
     }
 
-    public byte[] encrypt(byte[] paddedPlaintext) {
+    public byte[] encrypt(SignalSenderKeyName senderKeyId, byte[] paddedPlaintext) {
         try {
             var record = store.findSenderKeyByName(senderKeyId).orElseGet(() -> {
                 var newRecord = new SignalSenderKeyRecord();
@@ -59,7 +57,7 @@ public final class SignalGroupCipher {
         }
     }
 
-    public byte[] decrypt(byte[] senderKeyMessageBytes) {
+    public byte[] decrypt(SignalSenderKeyName senderKeyId, byte[] senderKeyMessageBytes) {
         try {
             var record = store.findSenderKeyByName(senderKeyId).orElseGet(() -> {
                 var newRecord = new SignalSenderKeyRecord();

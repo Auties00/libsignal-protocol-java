@@ -1,5 +1,6 @@
 package com.github.auties00.libsignal.state;
 
+import com.github.auties00.libsignal.groups.ratchet.SignalSenderMessageKey;
 import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.ratchet.SignalRootKey;
@@ -125,7 +126,7 @@ public final class SignalSessionState {
     }
 
     public void addReceiverChain(SignalSessionChain chain) {
-        receiverChains.addLast(chain);
+        receiverChains.add(chain);
     }
 
     public Integer localRegistrationId() {
@@ -160,6 +161,31 @@ public final class SignalSessionState {
         this.senderChain = chain;
     }
 
+    public SequencedCollection<? extends SignalSessionChain> receiverChains() {
+        return receiverChains.values();
+    }
+
+    public boolean needsRefresh() {
+        return needsRefresh;
+    }
+
+    public void setNeedsRefresh(boolean needsRefresh) {
+        this.needsRefresh = needsRefresh;
+    }
+
+    public SignalPendingKeyExchange pendingKeyExchange() {
+        return pendingKeyExchange;
+    }
+
+    public void setPendingKeyExchange(SignalPendingKeyExchange pendingKeyExchange) {
+        this.pendingKeyExchange = pendingKeyExchange;
+    }
+
+    public void setReceiverChains(SequencedCollection<? extends SignalSessionChain> chains) {
+        receiverChains.clear();
+        receiverChains.addAll(chains);
+    }
+
     static final class ReceiverChains extends AbstractCollection<SignalSessionChain> {
         private static final int MAX_RECEIVER_CHAINS = 5;
 
@@ -173,11 +199,18 @@ public final class SignalSessionState {
             return Optional.ofNullable(backing.get(publicKey));
         }
 
-        public void addLast(SignalSessionChain chain) {
+        @Override
+        public boolean add(SignalSessionChain chain) {
             if (backing.size() == MAX_RECEIVER_CHAINS) {
                 backing.pollFirstEntry();
             }
             backing.put(chain.senderRatchetKey(), chain);
+            return true;
+        }
+
+        @Override
+        public void clear() {
+            backing.clear();
         }
 
         @Override
@@ -189,6 +222,10 @@ public final class SignalSessionState {
         @Override
         public int size() {
             return backing.size();
+        }
+
+        public SequencedCollection<? extends SignalSessionChain> values() {
+            return Collections.unmodifiableSequencedCollection(backing.sequencedValues());
         }
     }
 }

@@ -20,7 +20,7 @@ public final class SignalSessionRecord {
     @ProtobufProperty(index = 2, type = ProtobufType.MESSAGE)
     final SequencedCollection<SignalSessionState> previousStates;
 
-    private final boolean fresh;
+    private boolean fresh;
 
     SignalSessionRecord(SignalSessionState sessionState, SequencedCollection<SignalSessionState> previousStates) {
         this.sessionState = sessionState;
@@ -32,12 +32,6 @@ public final class SignalSessionRecord {
         this.sessionState = new SignalSessionState();
         this.previousStates = new LinkedList<>();
         this.fresh = true;
-    }
-
-    public SignalSessionRecord(SignalSessionState sessionState) {
-        this.sessionState = sessionState;
-        this.previousStates = new LinkedList<>();
-        this.fresh = false;
     }
 
     public boolean hasSessionState(int version, byte[] aliceBaseKey) {
@@ -66,14 +60,22 @@ public final class SignalSessionRecord {
         return fresh;
     }
 
+    public void setFresh(boolean fresh) {
+        this.fresh = fresh;
+    }
+
     public void archiveCurrentState() {
-        promoteState(new SignalSessionState());
+        this.previousStates.addFirst(sessionState);
+        this.sessionState = new SignalSessionState();
+        if (previousStates.size() > ARCHIVED_STATES_MAX_LENGTH) {
+            previousStates.removeLast();
+        }
     }
 
     public void promoteState(SignalSessionState promotedState) {
+        this.previousStates.remove(promotedState);
         this.previousStates.addFirst(sessionState);
         this.sessionState = promotedState;
-
         if (previousStates.size() > ARCHIVED_STATES_MAX_LENGTH) {
             previousStates.removeLast();
         }

@@ -7,6 +7,8 @@ import it.auties.protobuf.model.ProtobufType;
 import it.auties.protobuf.stream.ProtobufInputStream;
 import it.auties.protobuf.stream.ProtobufOutputStream;
 
+import java.util.OptionalInt;
+
 @ProtobufMessage(name = "PreKeySignalMessage")
 public final class SignalPreKeyMessage implements SignalCiphertextMessage {
     private Integer version;
@@ -85,8 +87,8 @@ public final class SignalPreKeyMessage implements SignalCiphertextMessage {
         return SignalMessage.ofSerialized(serializedSignalMessage);
     }
 
-    public Integer preKeyId() {
-        return preKeyId;
+    public OptionalInt preKeyId() {
+        return preKeyId == null ? OptionalInt.empty() : OptionalInt.of(preKeyId);
     }
 
     public SignalIdentityPublicKey baseKey() {

@@ -37,7 +37,6 @@ public final class SignalChainKey {
         return key;
     }
 
-
     public SignalChainKey next() {
         try {
             var mac = Mac.getInstance("HmacSHA256");

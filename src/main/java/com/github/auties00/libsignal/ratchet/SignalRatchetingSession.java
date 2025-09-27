@@ -77,21 +77,20 @@ public final class SignalRatchetingSession {
                     .key(receiverChainKeyData)
                     .index(0)
                     .build();
-            var receiverChain = new SignalSessionChainBuilder()
+            sessionState.addReceiverChain(new SignalSessionChainBuilder()
                     .senderRatchetKey(parameters.theirRatchetKey())
                     .chainKey(receiverChainKey)
-                    .build();
-            sessionState.addReceiverChain(receiverChain);
+                    .build());
 
             var hkdf = HKDF.of(sessionState.sessionVersion());
-            var chain = receiverRootKey.createChain(hkdf, sendingRatchetKey.privateKey(), parameters.theirRatchetKey());
-            var senderChain = new SignalSessionChainBuilder()
+            var sendingChain = receiverRootKey.createChain(hkdf, sendingRatchetKey.privateKey(), parameters.theirRatchetKey());
+            sessionState.setSenderChain(new SignalSessionChainBuilder()
                     .senderRatchetKey(sendingRatchetKey.publicKey())
-                    .chainKey(chain.chainKey())
-                    .build();
-            sessionState.setSenderChain(senderChain);
+                    .senderRatchetKeyPrivate(sendingRatchetKey.privateKey())
+                    .chainKey(sendingChain.chainKey())
+                    .build());
 
-            sessionState.setRootKey(receiverRootKey);
+            sessionState.setRootKey(sendingChain.rootKey());
         } catch (GeneralSecurityException exception) {
             throw new InternalError(exception);
         }
@@ -130,6 +129,7 @@ public final class SignalRatchetingSession {
                     .build();
             var senderChain = new SignalSessionChainBuilder()
                     .senderRatchetKey(parameters.ourRatchetKey().publicKey())
+                    .senderRatchetKeyPrivate(parameters.ourRatchetKey().privateKey())
                     .chainKey(senderChainKey)
                     .build();
             sessionState.setSenderChain(senderChain);

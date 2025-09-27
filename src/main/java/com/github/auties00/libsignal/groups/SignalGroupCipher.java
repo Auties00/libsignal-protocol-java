@@ -1,6 +1,6 @@
 package com.github.auties00.libsignal.groups;
 
-import com.github.auties00.libsignal.SignalDataStore;
+import com.github.auties00.libsignal.SignalProtocolStore;
 import com.github.auties00.libsignal.groups.ratchet.SignalSenderMessageKey;
 import com.github.auties00.libsignal.groups.state.SignalSenderKeyRecord;
 import com.github.auties00.libsignal.groups.state.SignalSenderKeyState;
@@ -11,15 +11,16 @@ import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 
 public final class SignalGroupCipher {
     private static final int MAX_MESSAGE_KEYS = 2000;
 
-    private final SignalDataStore store;
+    private final SignalProtocolStore store;
     private final SignalSenderKeyName senderKeyId;
     private final Cipher cipher;
 
-    public SignalGroupCipher(SignalDataStore store, SignalSenderKeyName senderKeyId) {
+    public SignalGroupCipher(SignalProtocolStore store, SignalSenderKeyName senderKeyId) {
         this.store = store;
         this.senderKeyId = senderKeyId;
         try {
@@ -38,7 +39,7 @@ public final class SignalGroupCipher {
             });
             var senderKeyState = record.findSenderKeyState()
                     .orElseThrow(() -> new IllegalStateException("No sender key state found"));
-            var senderKey = senderKeyState.chainKey().toSenderMessageKey();
+            var senderKey = senderKeyState.senderChainKey().toSenderMessageKey();
             cipher.init(Cipher.ENCRYPT_MODE, senderKey.cipherKey(), senderKey.iv());
             var ciphertext = cipher.doFinal(paddedPlaintext);
 
@@ -50,7 +51,7 @@ public final class SignalGroupCipher {
                     senderKeyState.signatureKey().privateKey()
             );
 
-            senderKeyState.setChainKey(senderKeyState.chainKey().next());
+            senderKeyState.setSenderChainKey(senderKeyState.senderChainKey().next());
 
             return senderKeyMessage.toSerialized();
         } catch (GeneralSecurityException exception) {
@@ -74,7 +75,7 @@ public final class SignalGroupCipher {
             var senderKeyState = record.findSenderKeyStateById(senderKeyMessage.id())
                     .orElseThrow(() -> new SecurityException("Cannot find sender key state with id " + senderKeyMessage.id()));
             if (!senderKeyMessage.verifySignature(senderKeyState.signatureKey().publicKey())) {
-                throw new GeneralSecurityException("Invalid signature!");
+                throw new SignatureException("Invalid signature!");
             }
 
             var senderKey = getSenderKey(senderKeyState, senderKeyMessage.iteration());
@@ -86,7 +87,7 @@ public final class SignalGroupCipher {
     }
 
     private SignalSenderMessageKey getSenderKey(SignalSenderKeyState senderKeyState, int iteration) {
-        var senderChainKey = senderKeyState.chainKey();
+        var senderChainKey = senderKeyState.senderChainKey();
         var currentSenderChainKey = senderChainKey.iteration();
 
         if (currentSenderChainKey > iteration) {
@@ -103,7 +104,7 @@ public final class SignalGroupCipher {
             senderChainKey = senderChainKey.next();
         }
 
-        senderKeyState.setChainKey(senderChainKey.next());
+        senderKeyState.setSenderChainKey(senderChainKey.next());
         return senderChainKey.toSenderMessageKey();
     }
 }

@@ -41,13 +41,13 @@ public final class SignalSenderKeyRecord {
                 .build();
         var senderKeyState = new SignalSenderKeyStateBuilder()
                 .id(id)
-                .chainKey(senderChainKey)
+                .senderChainKey(senderChainKey)
                 .signatureKey(new SignalIdentityKeyPair(signatureKey))
                 .build();
         senderKeyStates.add(senderKeyState);
     }
 
-    public void setSenderKeyState(int id, int iteration, byte[] chainKey, SignalIdentityPublicKey signatureKey) {
+    public void setSenderKeyState(int id, int iteration, byte[] chainKey, SignalIdentityKeyPair signatureKey) {
         senderKeyStates.clear();
         var senderChainKey = new SignalSenderChainKeyBuilder()
                 .iteration(iteration)
@@ -55,8 +55,8 @@ public final class SignalSenderKeyRecord {
                 .build();
         var senderKeyState = new SignalSenderKeyStateBuilder()
                 .id(id)
-                .chainKey(senderChainKey)
-                .signatureKey(new SignalIdentityKeyPair(signatureKey))
+                .senderChainKey(senderChainKey)
+                .signatureKey(signatureKey)
                 .build();
         senderKeyStates.add(senderKeyState);
     }

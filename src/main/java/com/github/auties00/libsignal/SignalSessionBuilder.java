@@ -14,21 +14,23 @@ import com.github.auties00.libsignal.state.SignalSessionRecord;
 import java.util.OptionalInt;
 
 public final class SignalSessionBuilder {
-    private final SignalDataStore store;
-    private final SignalAddress remoteAddress;
+    private final SignalProtocolStore store;
+    private final SignalProtocolAddress remoteAddress;
 
-    public SignalSessionBuilder(SignalDataStore store, SignalAddress remoteAddress) {
+    public SignalSessionBuilder(SignalProtocolStore store, SignalProtocolAddress remoteAddress) {
         this.store = store;
         this.remoteAddress = remoteAddress;
     }
 
     OptionalInt process(SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {
         var theirIdentityKey = message.identityKey();
-        if (!store.hasTrust(remoteAddress, theirIdentityKey, SignalKeyDirection.INCOMING)) {
+        if (!store.isTrustedIdentity(remoteAddress, theirIdentityKey, SignalKeyDirection.INCOMING)) {
             throw new SecurityException("The identity key of the incoming message is not trusted");
         }
 
-        return processV3(sessionRecord, message);
+        var unsignedPreKeyId = processV3(sessionRecord, message);
+        store.addTrustedIdentity(remoteAddress, theirIdentityKey);
+        return unsignedPreKeyId;
     }
 
     private OptionalInt processV3(SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {
@@ -37,7 +39,7 @@ public final class SignalSessionBuilder {
         }
 
         var ourSignedPreKey = store.findSignedPreKeyById(message.signedPreKeyId())
-                .orElseThrow(() -> new IllegalStateException("No prekey found with id " + message.signedPreKeyId()));
+                .orElseThrow(() -> new IllegalStateException("No signed prekey found with id " + message.signedPreKeyId()));
         var parameters = new SignalBobParametersBuilder()
                 .theirBaseKey(message.baseKey())
                 .theirIdentityKey(message.identityKey())
@@ -45,12 +47,11 @@ public final class SignalSessionBuilder {
                 .ourSignedPreKey(ourSignedPreKey.keyPair())
                 .ourRatchetKey(ourSignedPreKey.keyPair());
 
-        var preKeyId = message.preKeyId();
-        if (preKeyId != null) {
+        message.preKeyId().ifPresent(preKeyId -> {
             var preKey = store.findPreKeyById(preKeyId)
                     .orElseThrow(() -> new IllegalStateException("No prekey found with id " + preKeyId));
             parameters.ourOneTimePreKey(preKey.keyPair());
-        }
+        });
 
         if (!sessionRecord.isFresh()) {
             sessionRecord.archiveCurrentState();
@@ -65,11 +66,11 @@ public final class SignalSessionBuilder {
         sessionRecord.sessionState()
                 .setBaseKey(message.baseKey().toSerialized());
 
-        return preKeyId == null ? OptionalInt.empty() : OptionalInt.of(preKeyId);
+        return message.preKeyId();
     }
 
     public void process(SignalPreKeyBundle preKey) {
-        if (!store.hasTrust(remoteAddress, preKey.identityKey(), SignalKeyDirection.OUTGOING)) {
+        if (!store.isTrustedIdentity(remoteAddress, preKey.identityKey(), SignalKeyDirection.OUTGOING)) {
             throw new SecurityException("The identity key of the incoming message is not trusted");
         }
 
@@ -84,11 +85,8 @@ public final class SignalSessionBuilder {
             throw new SecurityException("Invalid signature on device key!");
         }
 
-        var sessionRecord = store.findSessionByAddress(remoteAddress).orElseGet(() -> {
-            var record = new SignalSessionRecord();
-            store.addSession(remoteAddress, record);
-            return record;
-        });
+        var sessionRecord = store.findSessionByAddress(remoteAddress)
+                .orElseGet(SignalSessionRecord::new);
 
         var ourBaseKey = SignalIdentityKeyPair.random();
 
@@ -123,5 +121,10 @@ public final class SignalSessionBuilder {
                 .setRemoteRegistrationId(preKey.registrationId());
         sessionRecord.sessionState()
                 .setBaseKey(ourBaseKey.publicKey().toSerialized());
+
+        store.addTrustedIdentity(remoteAddress, preKey.identityKey());
+
+        sessionRecord.setFresh(false);
+        store.addSession(remoteAddress, sessionRecord);
     }
 }

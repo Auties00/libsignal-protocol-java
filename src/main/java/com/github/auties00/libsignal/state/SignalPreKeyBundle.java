@@ -31,7 +31,7 @@ public final class SignalPreKeyBundle {
     @ProtobufProperty(index = 8, type = ProtobufType.BYTES)
     final SignalIdentityPublicKey identityKey;
 
-    SignalPreKeyBundle(int registrationId, int deviceId, int preKeyId, SignalIdentityPublicKey preKeyPublic, int signedPreKeyId, SignalIdentityPublicKey signedPreKeyPublic, byte[] signedPreKeySignature, SignalIdentityPublicKey identityKey) {
+    public SignalPreKeyBundle(int registrationId, int deviceId, int preKeyId, SignalIdentityPublicKey preKeyPublic, int signedPreKeyId, SignalIdentityPublicKey signedPreKeyPublic, byte[] signedPreKeySignature, SignalIdentityPublicKey identityKey) {
         this.registrationId = registrationId;
         this.deviceId = deviceId;
         this.preKeyId = preKeyId;

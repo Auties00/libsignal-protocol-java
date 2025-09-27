@@ -1,5 +1,6 @@
 package com.github.auties00.libsignal.state;
 
+import com.github.auties00.libsignal.groups.ratchet.SignalSenderMessageKey;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.ratchet.SignalChainKey;
@@ -59,6 +60,15 @@ public final class SignalSessionChain {
         return messageKeys.remove(index);
     }
 
+    public SequencedCollection<? extends SignalMessageKey> messageKeys() {
+        return messageKeys.values();
+    }
+
+    public void setMessageKeys(SequencedCollection<? extends SignalMessageKey> messageKeys) {
+        this.messageKeys.clear();
+        this.messageKeys.addAll(messageKeys);
+    }
+
     static final class MessageKeys extends AbstractCollection<SignalMessageKey> {
         private static final int MAX_MESSAGE_KEYS = 2000;
 
@@ -69,18 +79,17 @@ public final class SignalSessionChain {
         }
 
 
-        public Optional<SignalMessageKey> get() {
-            return backing.isEmpty()
-                    ? Optional.empty()
-                    : Optional.ofNullable(backing.firstEntry().getValue());
-        }
-
         public Optional<SignalMessageKey> remove(int index) {
             return Optional.ofNullable(backing.remove(index));
         }
 
         public boolean contains(int index) {
             return backing.get(index) != null;
+        }
+
+        @Override
+        public void clear() {
+            backing.clear();
         }
 
         @Override
@@ -101,6 +110,10 @@ public final class SignalSessionChain {
         @Override
         public int size() {
             return backing.size();
+        }
+
+        public SequencedCollection<? extends SignalMessageKey> values() {
+            return Collections.unmodifiableSequencedCollection(backing.sequencedValues());
         }
     }
 }

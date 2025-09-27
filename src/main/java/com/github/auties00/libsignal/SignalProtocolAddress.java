@@ -5,14 +5,14 @@ import it.auties.protobuf.annotation.ProtobufSerializer;
 
 import java.util.Objects;
 
-public record SignalAddress(String name, int id) {
+public record SignalProtocolAddress(String name, int id) {
     @ProtobufDeserializer
-    public static SignalAddress of(String serialized) {
+    public static SignalProtocolAddress of(String serialized) {
         var split = serialized.split(":", 2);
         if (split.length != 2) {
             throw new IllegalArgumentException("Malformed address: " + serialized);
         }
-        return new SignalAddress(split[0], Integer.parseInt(split[1]));
+        return new SignalProtocolAddress(split[0], Integer.parseInt(split[1]));
     }
 
     @ProtobufSerializer

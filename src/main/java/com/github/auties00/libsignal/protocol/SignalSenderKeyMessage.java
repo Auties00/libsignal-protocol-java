@@ -45,7 +45,7 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
         var serialized = new byte[1 + messageLength];
         serialized[0] = (byte) (version << 4 | CURRENT_VERSION);
         SignalSenderKeyMessageSpec.encode(this, ProtobufOutputStream.toBytes(serialized, 1));
-        this.signature = Curve25519.sign(signaturePrivateKey.toEncodedPoint(), serialized, null);
+        this.signature = Curve25519.sign(signaturePrivateKey.toEncodedPoint(), serialized);
     }
 
     public static SignalSenderKeyMessage ofSerialized(byte[] serialized) {
@@ -91,7 +91,7 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
             throw new InternalError();
         }
         var messageLength = SignalSenderKeyMessageSpec.sizeOf(this);
-        var serialized = new byte[1 + messageLength + SIGNATURE_LENGTH];
+        var serialized = new byte[1 + messageLength];
         if (version == null) {
             throw new InternalError();
         }

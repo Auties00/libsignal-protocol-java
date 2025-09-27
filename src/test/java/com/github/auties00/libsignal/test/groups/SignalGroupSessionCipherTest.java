@@ -1,12 +1,11 @@
-/*
 package com.github.auties00.libsignal.test.groups;
 
-import com.github.auties00.libsignal.SignalAddress;
+import com.github.auties00.libsignal.SignalProtocolAddress;
 import com.github.auties00.libsignal.groups.SignalGroupCipher;
 import com.github.auties00.libsignal.groups.SignalGroupSessionBuilder;
 import com.github.auties00.libsignal.groups.SignalSenderKeyName;
 import com.github.auties00.libsignal.protocol.SignalSenderKeyDistributionMessage;
-import com.github.auties00.libsignal.test.InMemorySignalDataStore;
+import com.github.auties00.libsignal.test.InMemorySignalProtocolStore;
 import org.junit.jupiter.api.Test;
 
 import java.security.NoSuchAlgorithmException;
@@ -21,13 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SignalGroupSessionCipherTest {
 
-    private static final SignalAddress SENDER_ADDRESS = new SignalAddress("+14150001111", 1);
+    private static final SignalProtocolAddress SENDER_ADDRESS = new SignalProtocolAddress("+14150001111", 1);
     private static final SignalSenderKeyName GROUP_SENDER = new SignalSenderKeyName("nihilist history reading group", SENDER_ADDRESS);
 
     @Test
     public void testNoSession() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -51,8 +50,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testBasicEncryptDecrypt() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -72,8 +71,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testLargeMessages() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -96,8 +95,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testBasicRatchet() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -137,8 +136,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testLateJoin() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
 
@@ -172,8 +171,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testOutOfOrder() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -205,8 +204,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testEncryptNoSession() {
-        var aliceStore = new InMemorySignalDataStore();
-        var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore, new SignalSenderKeyName("coolio groupio", new SignalAddress("+10002223333", 1)));
+        var aliceStore = new InMemorySignalProtocolStore();
+        var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore, new SignalSenderKeyName("coolio groupio", new SignalProtocolAddress("+10002223333", 1)));
         try {
             aliceSignalGroupCipher.encrypt("up the punks".getBytes());
             throw new InternalError("Should have failed!");
@@ -218,8 +217,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testTooFarInFuture() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -248,8 +247,8 @@ public class SignalGroupSessionCipherTest {
 
     @Test
     public void testMessageKeyLimit() {
-        var aliceStore = new InMemorySignalDataStore();
-        var bobStore = new InMemorySignalDataStore();
+        var aliceStore = new InMemorySignalProtocolStore();
+        var bobStore = new InMemorySignalProtocolStore();
 
         var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
         var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
@@ -289,5 +288,3 @@ public class SignalGroupSessionCipherTest {
         }
     }
 }
-
- */

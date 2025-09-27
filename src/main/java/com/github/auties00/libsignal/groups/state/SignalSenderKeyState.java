@@ -15,7 +15,7 @@ public final class SignalSenderKeyState {
     final int id;
 
     @ProtobufProperty(index = 2, type = ProtobufType.MESSAGE)
-    SignalSenderChainKey chainKey;
+    SignalSenderChainKey senderChainKey;
 
     @ProtobufProperty(index = 3, type = ProtobufType.MESSAGE)
     final SignalIdentityKeyPair signatureKey;
@@ -23,9 +23,9 @@ public final class SignalSenderKeyState {
     @ProtobufProperty(index = 4, type = ProtobufType.MESSAGE)
     final MessageKeys messageKeys;
 
-    SignalSenderKeyState(int id, SignalSenderChainKey chainKey, SignalIdentityKeyPair signatureKey, MessageKeys messageKeys) {
+    SignalSenderKeyState(int id, SignalSenderChainKey senderChainKey, SignalIdentityKeyPair signatureKey, MessageKeys messageKeys) {
         this.id = id;
-        this.chainKey = chainKey;
+        this.senderChainKey = senderChainKey;
         this.signatureKey = signatureKey;
         this.messageKeys = messageKeys;
     }
@@ -34,19 +34,19 @@ public final class SignalSenderKeyState {
         return id;
     }
 
-    public SignalSenderChainKey chainKey() {
-        return chainKey;
+    public SignalSenderChainKey senderChainKey() {
+        return senderChainKey;
     }
 
-    public void setChainKey(SignalSenderChainKey chainKey) {
-        this.chainKey = chainKey;
+    public void setSenderChainKey(SignalSenderChainKey senderChainKey) {
+        this.senderChainKey = senderChainKey;
     }
 
     public SignalIdentityKeyPair signatureKey() {
         return signatureKey;
     }
 
-    public SequencedCollection<SignalSenderMessageKey> messageKeys() {
+    public SequencedCollection<? extends SignalSenderMessageKey> messageKeys() {
         return messageKeys.values();
     }
 
@@ -80,7 +80,7 @@ public final class SignalSenderKeyState {
             this.backing = new LinkedHashMap<>(MAX_MESSAGE_KEYS, 0.75F, true);
         }
 
-        public SequencedCollection<SignalSenderMessageKey> values() {
+        public SequencedCollection<? extends SignalSenderMessageKey> values() {
             return Collections.unmodifiableSequencedCollection(backing.sequencedValues());
         }
 

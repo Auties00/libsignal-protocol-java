@@ -87,7 +87,7 @@ public final class SignalMessage implements SignalCiphertextMessage {
         if (mac == null || mac.length != MAC_LENGTH) {
             throw new InternalError();
         }
-        System.arraycopy(mac, 0, serialized, 1 + messageLength, mac.length);
+        System.arraycopy(mac, 0, serialized, 1 + messageLength, MAC_LENGTH);
         return serialized;
     }
 

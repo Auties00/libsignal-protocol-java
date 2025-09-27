@@ -1,15 +1,15 @@
 package com.github.auties00.libsignal.groups;
 
-import com.github.auties00.libsignal.SignalAddress;
+import com.github.auties00.libsignal.SignalProtocolAddress;
 import it.auties.protobuf.annotation.ProtobufDeserializer;
 import it.auties.protobuf.annotation.ProtobufSerializer;
 
-public record SignalSenderKeyName(String groupId, SignalAddress sender) {
+public record SignalSenderKeyName(String groupId, SignalProtocolAddress sender) {
     @ProtobufDeserializer
     public static SignalSenderKeyName of(String serialized) {
         var split = serialized.split("::", 3);
         var groupJid = split[0];
-        var address = new SignalAddress(split[1], Integer.parseUnsignedInt(split[2]));
+        var address = new SignalProtocolAddress(split[1], Integer.parseUnsignedInt(split[2]));
         return new SignalSenderKeyName(groupJid, address);
     }
 

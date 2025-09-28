@@ -465,7 +465,7 @@ public class SignalCipherBenchmark {
     }
 
     @Benchmark
-    public void rustBindingsLibSignalSessionEncryptExtraLarge(RustBindingsLibSessionEncryptState state, Blackhole bh) throws Exception {
+    public void rustBindingsLibSignalSessionEncryptExtraLarge(RustBindingsLibSessionEncryptState state, Blackhole   bh) throws Exception {
         // Encrypt 100 messages
         for (var i = 0; i < 100; i++) {
             var encrypted = state.aliceSessionCipher.encrypt(EXTRA_LARGE_MESSAGE);
@@ -764,7 +764,7 @@ public class SignalCipherBenchmark {
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
             for (var i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, SMALL_MESSAGE));
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, SMALL_MESSAGE).toSerialized());
             }
         }
     }
@@ -781,7 +781,7 @@ public class SignalCipherBenchmark {
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
             for (var i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, MEDIUM_MESSAGE));
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, MEDIUM_MESSAGE).toSerialized());
             }
         }
     }
@@ -798,7 +798,7 @@ public class SignalCipherBenchmark {
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
             for (var i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, LARGE_MESSAGE));
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, LARGE_MESSAGE).toSerialized());
             }
         }
     }
@@ -815,7 +815,7 @@ public class SignalCipherBenchmark {
             encryptedMessages = new ArrayList<>();
             // Prepare 100 encrypted messages
             for (var i = 0; i < 100; i++) {
-                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, EXTRA_LARGE_MESSAGE));
+                encryptedMessages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, EXTRA_LARGE_MESSAGE).toSerialized());
             }
         }
     }
@@ -1357,7 +1357,7 @@ public class SignalCipherBenchmark {
             messages = new ArrayList<>();
             // Prepare 100 encrypted messages
             for (var i = 0; i < 100; i++) {
-                messages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, ("Out of order message " + i).getBytes()));
+                messages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, ("Out of order message " + i).getBytes()).toSerialized());
             }
         }
     }
@@ -1391,7 +1391,7 @@ public class SignalCipherBenchmark {
             messages = new ArrayList<>();
             // Create many messages to test message key limits
             for (var i = 0; i < 2000; i++) {
-                messages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, ("stress test " + i).getBytes()));
+                messages.add(setupResult.aliceGroupCipher.encrypt(newJavaLibRecipient, ("stress test " + i).getBytes()).toSerialized());
             }
         }
     }

@@ -1,8 +1,8 @@
 package com.github.auties00.libsignal.groups;
 
+import com.github.auties00.libsignal.InMemorySignalProtocolStore;
 import com.github.auties00.libsignal.SignalProtocolAddress;
 import com.github.auties00.libsignal.protocol.SignalSenderKeyDistributionMessage;
-import com.github.auties00.libsignal.InMemorySignalProtocolStore;
 import org.junit.jupiter.api.Test;
 
 import java.security.NoSuchAlgorithmException;
@@ -38,7 +38,7 @@ public class SignalGroupSessionCipherTest {
 
         var ciphertextFromAlice = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert".getBytes());
         try {
-            var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice);
+            var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice.toSerialized());
             throw new InternalError("Should be no session!");
         } catch (RuntimeException e) {
             // good
@@ -61,7 +61,7 @@ public class SignalGroupSessionCipherTest {
         bobSessionBuilder.process(GROUP_SENDER, receivedAliceDistributionMessage);
 
         var ciphertextFromAlice = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert".getBytes());
-        var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice);
+        var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice.toSerialized());
 
         assertEquals("smert ze smert", new String(plaintextFromAlice));
     }
@@ -85,7 +85,7 @@ public class SignalGroupSessionCipherTest {
         new Random().nextBytes(plaintext);
 
         var ciphertextFromAlice = aliceSignalGroupCipher.encrypt(GROUP_SENDER, plaintext);
-        var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice);
+        var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice.toSerialized());
 
         assertArrayEquals(plaintext, plaintextFromAlice);
     }
@@ -112,17 +112,17 @@ public class SignalGroupSessionCipherTest {
         var ciphertextFromAlice2 = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert2".getBytes());
         var ciphertextFromAlice3 = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert3".getBytes());
 
-        var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice);
+        var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice.toSerialized());
 
         try {
-            bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice);
+            bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice.toSerialized());
             throw new InternalError("Should have ratcheted forward!");
         } catch (RuntimeException dme) {
             // good
         }
 
-        var plaintextFromAlice2 = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice2);
-        var plaintextFromAlice3 = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice3);
+        var plaintextFromAlice2 = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice2.toSerialized());
+        var plaintextFromAlice3 = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice3.toSerialized());
 
         assertEquals("smert ze smert", new String(plaintextFromAlice));
         assertEquals("smert ze smert2", new String(plaintextFromAlice2));
@@ -155,7 +155,7 @@ public class SignalGroupSessionCipherTest {
         bobSessionBuilder.process(GROUP_SENDER, SignalSenderKeyDistributionMessage.ofSerialized(distributionMessageToBob.toSerialized()));
 
         var ciphertext = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "welcome to the group".getBytes());
-        var plaintext = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertext);
+        var plaintext = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertext.toSerialized());
 
         assertEquals("welcome to the group", new String(plaintext));
     }
@@ -180,7 +180,8 @@ public class SignalGroupSessionCipherTest {
         var ciphertexts = new ArrayList<byte[]>(100);
 
         for (var i = 0; i < 100; i++) {
-            ciphertexts.add(aliceSignalGroupCipher.encrypt(GROUP_SENDER, "up the punks".getBytes()));
+            var message = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "up the punks".getBytes());
+            ciphertexts.add(message.toSerialized());
         }
 
         while (!ciphertexts.isEmpty()) {
@@ -227,7 +228,7 @@ public class SignalGroupSessionCipherTest {
 
         var tooFarCiphertext = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "notta gonna worka".getBytes());
         try {
-            bobSignalGroupCipher.decrypt(GROUP_SENDER, tooFarCiphertext);
+            bobSignalGroupCipher.decrypt(GROUP_SENDER, tooFarCiphertext.toSerialized());
             throw new InternalError("Should have failed!");
         } catch (RuntimeException e) {
             // good
@@ -252,7 +253,8 @@ public class SignalGroupSessionCipherTest {
         List<byte[]> inflight = new LinkedList<>();
 
         for (var i = 0; i < 2010; i++) {
-            inflight.add(aliceSignalGroupCipher.encrypt(GROUP_SENDER, "up the punks".getBytes()));
+            var message = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "up the punks".getBytes());
+            inflight.add(message.toSerialized());
         }
 
         bobSignalGroupCipher.decrypt(GROUP_SENDER, inflight.get(1000));

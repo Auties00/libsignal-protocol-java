@@ -13,7 +13,7 @@ import java.security.SignatureException;
 import java.util.Objects;
 
 @ProtobufMessage
-public final class SignalDeviceConsistencyMessage {
+public final class SignalDeviceConsistencyMessage extends SignalPlaintextMessage {
     @ProtobufProperty(index = 1, type = ProtobufType.UINT32)
     final int generation;
 
@@ -47,7 +47,13 @@ public final class SignalDeviceConsistencyMessage {
                 .signature(message.signature)
                 .vrfOutput(vrfOutputBytes)
                 .build();
+        message.serialized = serialized;
         return message;
+    }
+
+    @Override
+    byte[] serialize() {
+        return SignalDeviceConsistencyMessageSpec.encode(this);
     }
 
     public int generation() {

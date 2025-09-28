@@ -14,7 +14,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 
 @ProtobufMessage(name = "SignalMessage")
-public final class SignalMessage implements SignalCiphertextMessage {
+public final class SignalMessage extends SignalCiphertextMessage {
     private static final Integer MAC_LENGTH = 8;
 
     private Integer version;
@@ -58,6 +58,7 @@ public final class SignalMessage implements SignalCiphertextMessage {
         var result = SignalMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1 - MAC_LENGTH));
         result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
         result.mac = mac;
+        result.serialized = serialized;
         return result;
     }
 
@@ -76,7 +77,7 @@ public final class SignalMessage implements SignalCiphertextMessage {
     }
 
     @Override
-    public byte[] toSerialized() {
+    byte[] serialize() {
         var messageLength = SignalMessageSpec.sizeOf(this);
         var serialized = new byte[1 + messageLength + MAC_LENGTH];
         if (version == null) {

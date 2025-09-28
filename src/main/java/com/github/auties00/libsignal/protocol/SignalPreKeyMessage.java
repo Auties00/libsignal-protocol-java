@@ -10,7 +10,7 @@ import it.auties.protobuf.stream.ProtobufOutputStream;
 import java.util.OptionalInt;
 
 @ProtobufMessage(name = "PreKeySignalMessage")
-public final class SignalPreKeyMessage implements SignalCiphertextMessage {
+public final class SignalPreKeyMessage extends SignalCiphertextMessage {
     private Integer version;
 
     @ProtobufProperty(index = 1, type = ProtobufType.UINT32)
@@ -55,6 +55,7 @@ public final class SignalPreKeyMessage implements SignalCiphertextMessage {
     public static SignalPreKeyMessage ofSerialized(byte[] serialized) {
         var result = SignalPreKeyMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1));
         result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
+        result.serialized = serialized;
         return result;
     }
 
@@ -73,7 +74,7 @@ public final class SignalPreKeyMessage implements SignalCiphertextMessage {
     }
 
     @Override
-    public byte[] toSerialized() {
+    byte[] serialize() {
         var serialized = new byte[1 + SignalPreKeyMessageSpec.sizeOf(this)];
         if (version == null) {
             throw new InternalError();

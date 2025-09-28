@@ -12,7 +12,7 @@ import it.auties.protobuf.stream.ProtobufOutputStream;
 import java.util.Arrays;
 
 @ProtobufMessage(name = "SenderKeyMessage")
-public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
+public final class SignalSenderKeyMessage extends SignalCiphertextMessage {
     private static final Integer SIGNATURE_LENGTH = 64;
 
     private Integer version;
@@ -53,6 +53,7 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
         var result = SignalSenderKeyMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1 - SIGNATURE_LENGTH));
         result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
         result.signature = signature;
+        result.serialized = serialized;
         return result;
     }
 
@@ -71,7 +72,7 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
     }
 
     @Override
-    public byte[] toSerialized() {
+    byte[] serialize() {
         var messageLength = SignalSenderKeyMessageSpec.sizeOf(this);
         var serialized = new byte[1 + messageLength + SIGNATURE_LENGTH];
         if (version == null) {
@@ -87,17 +88,8 @@ public final class SignalSenderKeyMessage implements SignalCiphertextMessage {
     }
 
     public boolean verifySignature(SignalIdentityPublicKey key) {
-        if (signature == null || signature.length != SIGNATURE_LENGTH) {
-            throw new InternalError();
-        }
-        var messageLength = SignalSenderKeyMessageSpec.sizeOf(this);
-        var serialized = new byte[1 + messageLength];
-        if (version == null) {
-            throw new InternalError();
-        }
-        serialized[0] = (byte) (version << 4 | CURRENT_VERSION);
-        SignalSenderKeyMessageSpec.encode(this, ProtobufOutputStream.toBytes(serialized, 1));
-        return Curve25519.verifySignature(key.toEncodedPoint(), serialized, signature);
+        var serialized = toSerialized();
+        return Curve25519.verifySignature(key.toEncodedPoint(), 0, serialized, 0, serialized.length - SIGNATURE_LENGTH, signature, 0);
     }
 
     public Integer id() {

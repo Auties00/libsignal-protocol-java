@@ -8,7 +8,7 @@ import it.auties.protobuf.stream.ProtobufInputStream;
 import it.auties.protobuf.stream.ProtobufOutputStream;
 
 @ProtobufMessage
-public final class SignalSenderKeyDistributionMessage implements SignalCiphertextMessage {
+public final class SignalSenderKeyDistributionMessage extends SignalCiphertextMessage {
     private Integer version;
 
     @ProtobufProperty(index = 1, type = ProtobufType.UINT32)
@@ -43,6 +43,7 @@ public final class SignalSenderKeyDistributionMessage implements SignalCiphertex
     public static SignalSenderKeyDistributionMessage ofSerialized(byte[] serialized) {
         var result = SignalSenderKeyDistributionMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1));
         result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
+        result.serialized = serialized;
         return result;
     }
 
@@ -61,7 +62,7 @@ public final class SignalSenderKeyDistributionMessage implements SignalCiphertex
     }
 
     @Override
-    public byte[] toSerialized() {
+    byte[] serialize() {
         var serialized = new byte[1 + SignalSenderKeyDistributionMessageSpec.sizeOf(this)];
         if (version == null) {
             throw new InternalError();

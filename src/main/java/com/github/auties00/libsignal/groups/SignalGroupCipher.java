@@ -2,7 +2,6 @@ package com.github.auties00.libsignal.groups;
 
 import com.github.auties00.libsignal.SignalProtocolStore;
 import com.github.auties00.libsignal.groups.ratchet.SignalSenderMessageKey;
-import com.github.auties00.libsignal.groups.state.SignalSenderKeyRecord;
 import com.github.auties00.libsignal.groups.state.SignalSenderKeyState;
 import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import com.github.auties00.libsignal.protocol.SignalSenderKeyMessage;
@@ -28,16 +27,15 @@ public final class SignalGroupCipher {
         }
     }
 
-    public byte[] encrypt(SignalSenderKeyName senderKeyId, byte[] paddedPlaintext) {
+    public SignalCiphertextMessage encrypt(SignalSenderKeyName senderKeyId, byte[] paddedPlaintext) {
         try {
-            var record = store.findSenderKeyByName(senderKeyId).orElseGet(() -> {
-                var newRecord = new SignalSenderKeyRecord();
-                store.addSenderKey(senderKeyId, newRecord);
-                return newRecord;
-            });
-            var senderKeyState = record.findSenderKeyState()
-                    .orElseThrow(() -> new IllegalStateException("No sender key state found"));
-            var senderKey = senderKeyState.senderChainKey().toSenderMessageKey();
+            var senderKeyState = store.findSenderKeyByName(senderKeyId)
+                    .orElseThrow(() -> new IllegalArgumentException("Sender key not found: " + senderKeyId))
+                    .findSenderKeyState()
+                    .orElseThrow(() -> new IllegalArgumentException("Sender key state not found: " + senderKeyId));
+
+            var senderKey = senderKeyState.senderChainKey()
+                    .toSenderMessageKey();
             cipher.init(Cipher.ENCRYPT_MODE, senderKey.cipherKey(), senderKey.iv());
             var ciphertext = cipher.doFinal(paddedPlaintext);
 
@@ -51,7 +49,7 @@ public final class SignalGroupCipher {
 
             senderKeyState.setSenderChainKey(senderKeyState.senderChainKey().next());
 
-            return senderKeyMessage.toSerialized();
+            return senderKeyMessage;
         } catch (GeneralSecurityException exception) {
             throw new RuntimeException("Cannot encrypt message", exception);
         }
@@ -59,16 +57,8 @@ public final class SignalGroupCipher {
 
     public byte[] decrypt(SignalSenderKeyName senderKeyId, byte[] senderKeyMessageBytes) {
         try {
-            var record = store.findSenderKeyByName(senderKeyId).orElseGet(() -> {
-                var newRecord = new SignalSenderKeyRecord();
-                store.addSenderKey(senderKeyId, newRecord);
-                return newRecord;
-            });
-
-            if (record.isEmpty()) {
-                throw new SecurityException("No sender key for: " + senderKeyId);
-            }
-
+            var record = store.findSenderKeyByName(senderKeyId)
+                    .orElseThrow(() -> new SecurityException("No sender key for: " + senderKeyId));
             var senderKeyMessage = SignalSenderKeyMessage.ofSerialized(senderKeyMessageBytes);
             var senderKeyState = record.findSenderKeyStateById(senderKeyMessage.id())
                     .orElseThrow(() -> new SecurityException("Cannot find sender key state with id " + senderKeyMessage.id()));

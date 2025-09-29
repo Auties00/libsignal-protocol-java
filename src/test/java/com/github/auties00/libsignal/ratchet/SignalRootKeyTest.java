@@ -6,11 +6,14 @@ import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.Mac;
+import java.security.NoSuchAlgorithmException;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class SignalRootKeyTest {
     @Test
-    public void testRootKeyDerivationV2()  {
+    public void testRootKeyDerivationV2() throws NoSuchAlgorithmException {
         var rootKeySeed = new byte[]{(byte) 0x7b, (byte) 0xa6, (byte) 0xde, (byte) 0xbc, (byte) 0x2b,
                 (byte) 0xc1, (byte) 0xbb, (byte) 0xf9, (byte) 0x1a, (byte) 0xbb,
                 (byte) 0xc1, (byte) 0x36, (byte) 0x74, (byte) 0x04, (byte) 0x17,
@@ -66,12 +69,13 @@ public class SignalRootKeyTest {
         var bobPublicKey = SignalIdentityPublicKey.ofDirect(bobPublic);
         var rootKey = SignalRootKey.of(SignalIdentityPublicKey.ofDirect(rootKeySeed));
 
-        var rootKeyChainKeyPair = rootKey.createChain(HKDF.of(2), aliceKeyPair.privateKey(), bobPublicKey);
+        var mac = Mac.getInstance("HmacSHA256");
+        var rootKeyChainKeyPair = rootKey.createChain(HKDF.of(2), mac, aliceKeyPair.privateKey(), bobPublicKey);
         var nextRootKey = rootKeyChainKeyPair.rootKey();
         var nextChainKey = rootKeyChainKeyPair.chainKey();
 
         assertArrayEquals(rootKey.key().toEncodedPoint(), rootKeySeed);
         assertArrayEquals(nextRootKey.key().toEncodedPoint(), nextRoot);
-        assertArrayEquals(nextChainKey.key(), nextChain);
+        assertArrayEquals(nextChainKey.key().getEncoded(), nextChain);
     }
 }

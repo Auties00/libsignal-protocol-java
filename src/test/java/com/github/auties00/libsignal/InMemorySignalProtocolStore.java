@@ -5,28 +5,28 @@ import com.github.auties00.libsignal.groups.state.SignalSenderKeyRecord;
 import com.github.auties00.libsignal.key.*;
 import com.github.auties00.libsignal.state.SignalSessionRecord;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class InMemorySignalProtocolStore implements SignalProtocolStore {
     private final int registrationId;
     private final SignalIdentityKeyPair identityKeyPair;
-    private final ConcurrentMap<SignalProtocolAddress, SignalSessionRecord> sessions;
-    private final ConcurrentMap<SignalSenderKeyName, SignalSenderKeyRecord> senderKeys;
-    private final ConcurrentMap<Integer, SignalSignedKeyPair> signedPreKeys;
-    private final ConcurrentMap<Integer, SignalPreKeyPair> preKeys;
-    private final ConcurrentMap<SignalProtocolAddress, SignalIdentityPublicKey> trustedIdentities;
+    private final Map<SignalProtocolAddress, SignalSessionRecord> sessions;
+    private final Map<SignalSenderKeyName, SignalSenderKeyRecord> senderKeys;
+    private final Map<Integer, SignalSignedKeyPair> signedPreKeys;
+    private final Map<Integer, SignalPreKeyPair> preKeys;
+    private final Map<SignalProtocolAddress, SignalIdentityPublicKey> trustedIdentities;
 
     public InMemorySignalProtocolStore() {
         this.registrationId = ThreadLocalRandom.current().nextInt(16380) + 1;
         this.identityKeyPair = SignalIdentityKeyPair.random();
-        this.sessions = new ConcurrentHashMap<>();
-        this.senderKeys = new ConcurrentHashMap<>();
-        this.signedPreKeys = new ConcurrentHashMap<>();
-        this.preKeys = new ConcurrentHashMap<>();
-        this.trustedIdentities = new ConcurrentHashMap<>();
+        this.sessions = new HashMap<>();
+        this.senderKeys = new HashMap<>();
+        this.signedPreKeys = new HashMap<>();
+        this.preKeys = new HashMap<>();
+        this.trustedIdentities = new HashMap<>();
     }
 
     @Override
@@ -70,7 +70,6 @@ public class InMemorySignalProtocolStore implements SignalProtocolStore {
         var existing = trustedIdentities.get(remoteAddress);
         if (!identityKey.equals(existing)) {
             trustedIdentities.put(remoteAddress, identityKey);
-        } else {
         }
     }
 

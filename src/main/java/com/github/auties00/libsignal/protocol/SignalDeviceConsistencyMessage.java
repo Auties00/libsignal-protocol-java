@@ -5,6 +5,7 @@ import com.github.auties00.libsignal.devices.SignalDeviceConsistencyCommitment;
 import com.github.auties00.libsignal.devices.SignalDeviceConsistencySignature;
 import com.github.auties00.libsignal.devices.SignalDeviceConsistencySignatureBuilder;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
+import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
@@ -12,7 +13,7 @@ import it.auties.protobuf.model.ProtobufType;
 import java.security.SignatureException;
 import java.util.Objects;
 
-@ProtobufMessage
+@ProtobufMessage(generateBuilder = false)
 public final class SignalDeviceConsistencyMessage extends SignalPlaintextMessage {
     @ProtobufProperty(index = 1, type = ProtobufType.UINT32)
     final int generation;
@@ -28,16 +29,20 @@ public final class SignalDeviceConsistencyMessage extends SignalPlaintextMessage
         // Don't set signatureMessage, it will be set by ofSerialized
     }
 
-    // TODO: Use this constructor as the default builder and make it package private
-    public SignalDeviceConsistencyMessage(SignalDeviceConsistencyCommitment commitment, SignalIdentityKeyPair identityKeyPair) throws SignatureException {
-        var signatureBytes = Curve25519.signVrf(identityKeyPair.privateKey().encodedPoint(), commitment.toSerialized());
-        var vrfOutputBytes = Curve25519.verifyVrfSignature(identityKeyPair.publicKey().toEncodedPoint(), commitment.toSerialized(), signatureBytes);
-        this.generation = commitment.generation();
-        this.signature = signatureBytes;
-        this.signatureMessage = new SignalDeviceConsistencySignatureBuilder()
-                .signature(signatureBytes)
-                .vrfOutput(vrfOutputBytes)
-                .build();
+    @ProtobufBuilder(className = "SignalDeviceConsistencyMessageBuilder")
+    SignalDeviceConsistencyMessage(SignalDeviceConsistencyCommitment commitment, SignalIdentityKeyPair identityKeyPair) {
+        try {
+            var signatureBytes = Curve25519.signVrf(identityKeyPair.privateKey().encodedPoint(), commitment.toSerialized());
+            var vrfOutputBytes = Curve25519.verifyVrfSignature(identityKeyPair.publicKey().toEncodedPoint(), commitment.toSerialized(), signatureBytes);
+            this.generation = commitment.generation();
+            this.signature = signatureBytes;
+            this.signatureMessage = new SignalDeviceConsistencySignatureBuilder()
+                    .signature(signatureBytes)
+                    .vrfOutput(vrfOutputBytes)
+                    .build();
+        }catch (SignatureException e) {
+            throw new InternalError(e);
+        }
     }
 
     public static SignalDeviceConsistencyMessage ofSerialized(byte[] serialized, SignalDeviceConsistencyCommitment commitment, SignalIdentityKeyPair identityKey) throws SignatureException {

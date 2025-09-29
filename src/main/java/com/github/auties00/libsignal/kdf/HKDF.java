@@ -5,10 +5,12 @@ import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 
 public final class HKDF {
+    private static final HKDF HKDF_V2 = new HKDF(0);
+    private static final HKDF HKDF_V3 = new HKDF(1);
+
     private static final int HASH_OUTPUT_SIZE = 32;
     private static final byte[] EMPTY_SALT = new byte[HASH_OUTPUT_SIZE];
 
@@ -20,23 +22,14 @@ public final class HKDF {
 
     public static HKDF of(int messageVersion) {
         return switch (messageVersion) {
-            case 2 -> new  HKDF(0);
-            case 3 -> new  HKDF(1);
+            case 2 -> HKDF_V2;
+            case 3 -> HKDF_V3;
             default -> throw new IllegalArgumentException("Unknown version: " + messageVersion);
         };
     }
 
     public static HKDF ofCurrent() {
         return of(SignalCiphertextMessage.CURRENT_VERSION);
-    }
-
-    public byte[] deriveSecrets(byte[] inputKeyMaterial, byte[] info, int outputLength) throws NoSuchAlgorithmException, InvalidKeyException {
-        return deriveSecrets(inputKeyMaterial, EMPTY_SALT, info, outputLength);
-    }
-
-    public byte[] deriveSecrets(byte[] inputKeyMaterial, byte[] salt, byte[] info, int outputLength) throws NoSuchAlgorithmException, InvalidKeyException {
-        var mac = Mac.getInstance("HmacSHA256");
-        return deriveSecrets(mac, inputKeyMaterial, salt, info, outputLength);
     }
 
     public byte[] deriveSecrets(Mac mac, byte[] inputKeyMaterial, byte[] info, int outputLength) throws InvalidKeyException {

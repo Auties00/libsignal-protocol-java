@@ -25,8 +25,8 @@ public class SignalFingerprintGeneratorTest {
     public void testVectorsVersion1() {
         var aliceIdentityKey = SignalIdentityPublicKey.ofDirect(ALICE_IDENTITY);
         var bobIdentityKey = SignalIdentityPublicKey.ofDirect(BOB_IDENTITY);
-        byte[] aliceStableId = "+14152222222".getBytes();
-        byte[] bobStableId = "+14153333333".getBytes();
+        var aliceStableId = "+14152222222".getBytes();
+        var bobStableId = "+14153333333".getBytes();
 
         var generator = new SignalFingerprintGenerator(5200);
 
@@ -49,8 +49,8 @@ public class SignalFingerprintGeneratorTest {
     public void testVectorsVersion2() {
         var aliceIdentityKey = SignalIdentityPublicKey.ofDirect(ALICE_IDENTITY);
         var bobIdentityKey = SignalIdentityPublicKey.ofDirect(BOB_IDENTITY);
-        byte[] aliceStableId = "+14152222222".getBytes();
-        byte[] bobStableId = "+14153333333".getBytes();
+        var aliceStableId = "+14152222222".getBytes();
+        var bobStableId = "+14153333333".getBytes();
 
 
         var generator = new SignalFingerprintGenerator(5200);
@@ -127,7 +127,7 @@ public class SignalFingerprintGeneratorTest {
         var aliceIdentityKey = aliceKeyPair.publicKey();
         var bobIdentityKey = bobKeyPair.publicKey();
 
-        SignalFingerprintGenerator generator = new SignalFingerprintGenerator(1024);
+        var generator = new SignalFingerprintGenerator(1024);
         var aliceFingerprint = generator.generate(VERSION_1,
                 "+141512222222".getBytes(), aliceIdentityKey,
                 "+14153333333".getBytes(), bobIdentityKey);
@@ -146,10 +146,10 @@ public class SignalFingerprintGeneratorTest {
     public void testDifferentVersionsMakeSameFingerPrintsButDifferentScannable() {
         var aliceIdentityKey = SignalIdentityPublicKey.ofDirect(ALICE_IDENTITY);
         var bobIdentityKey = SignalIdentityPublicKey.ofDirect(BOB_IDENTITY);
-        byte[] aliceStableId = "+14152222222".getBytes();
-        byte[] bobStableId = "+14153333333".getBytes();
+        var aliceStableId = "+14152222222".getBytes();
+        var bobStableId = "+14153333333".getBytes();
 
-        SignalFingerprintGenerator generator = new SignalFingerprintGenerator(5200);
+        var generator = new SignalFingerprintGenerator(5200);
 
         var aliceFingerprintV1 = generator.generate(VERSION_1,
                 aliceStableId, aliceIdentityKey,

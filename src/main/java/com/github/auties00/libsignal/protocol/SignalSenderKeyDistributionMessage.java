@@ -1,13 +1,17 @@
 package com.github.auties00.libsignal.protocol;
 
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
+import com.github.auties00.libsignal.mixins.AesSecretKeySpecMixin;
+import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
 import it.auties.protobuf.stream.ProtobufInputStream;
 import it.auties.protobuf.stream.ProtobufOutputStream;
 
-@ProtobufMessage
+import javax.crypto.spec.SecretKeySpec;
+
+@ProtobufMessage(generateBuilder = false)
 public final class SignalSenderKeyDistributionMessage extends SignalCiphertextMessage {
     private Integer version;
 
@@ -17,13 +21,13 @@ public final class SignalSenderKeyDistributionMessage extends SignalCiphertextMe
     @ProtobufProperty(index = 2, type = ProtobufType.UINT32)
     final Integer iteration;
 
-    @ProtobufProperty(index = 3, type = ProtobufType.BYTES)
-    final byte[] chainKey;
+    @ProtobufProperty(index = 3, type = ProtobufType.BYTES, mixins = AesSecretKeySpecMixin.class)
+    final SecretKeySpec chainKey;
 
     @ProtobufProperty(index = 4, type = ProtobufType.BYTES)
     final SignalIdentityPublicKey signatureKey;
 
-    SignalSenderKeyDistributionMessage(Integer id, Integer iteration, byte[] chainKey, SignalIdentityPublicKey signatureKey) {
+    SignalSenderKeyDistributionMessage(Integer id, Integer iteration, SecretKeySpec chainKey, SignalIdentityPublicKey signatureKey) {
         // Don't set the version, it will be set by ofSerialized
         this.id = id;
         this.iteration = iteration;
@@ -31,8 +35,8 @@ public final class SignalSenderKeyDistributionMessage extends SignalCiphertextMe
         this.signatureKey = signatureKey;
     }
 
-    // TODO: Use this constructor as the default builder and make it package private
-    public SignalSenderKeyDistributionMessage(Integer version, Integer id, Integer iteration, byte[] chainKey, SignalIdentityPublicKey signatureKey) {
+    @ProtobufBuilder(className = "SignalSenderKeyDistributionMessageBuilder")
+    SignalSenderKeyDistributionMessage(Integer version, Integer id, Integer iteration, SecretKeySpec chainKey, SignalIdentityPublicKey signatureKey) {
         this.version = version;
         this.id = id;
         this.iteration = iteration;
@@ -80,7 +84,7 @@ public final class SignalSenderKeyDistributionMessage extends SignalCiphertextMe
         return iteration;
     }
 
-    public byte[] chainKey() {
+    public SecretKeySpec chainKey() {
         return chainKey;
     }
 

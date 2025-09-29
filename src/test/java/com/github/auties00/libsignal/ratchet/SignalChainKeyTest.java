@@ -3,12 +3,14 @@ package com.github.auties00.libsignal.ratchet;
 import com.github.auties00.libsignal.kdf.HKDF;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SignalChainKeyTest {
     @Test
-    public void testChainKeyDerivationV2()  {
+    public void testChainKeyDerivationV2() {
         var seed = new byte[]{(byte) 0x8a, (byte) 0xb7, (byte) 0x2d, (byte) 0x6f, (byte) 0x4c,
                 (byte) 0xc5, (byte) 0xac, (byte) 0x0d, (byte) 0x38, (byte) 0x7e,
                 (byte) 0xaf, (byte) 0x46, (byte) 0x33, (byte) 0x78, (byte) 0xdd,
@@ -44,13 +46,13 @@ public class SignalChainKeyTest {
         var hkdf = HKDF.of(2);
         var chainKey = new SignalChainKeyBuilder()
                 .index(0)
-                .key(seed)
+                .key(new SecretKeySpec(seed, "AES"))
                 .build();
 
-        assertArrayEquals(chainKey.key(), seed);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).cipherKey(), messageKey);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).macKey(), macKey);
-        assertArrayEquals(chainKey.next().key(), nextChainKey);
+        assertArrayEquals(chainKey.key().getEncoded(), seed);
+        assertArrayEquals(chainKey.toMessageKeys(hkdf).cipherKey().getEncoded(), messageKey);
+        assertArrayEquals(chainKey.toMessageKeys(hkdf).macKey().getEncoded(), macKey);
+        assertArrayEquals(chainKey.next().key().getEncoded(), nextChainKey);
         assertEquals(0, chainKey.index());
         assertEquals(0, chainKey.toMessageKeys(hkdf).counter());
         assertEquals(1, chainKey.next().index());
@@ -58,7 +60,7 @@ public class SignalChainKeyTest {
     }
 
     @Test
-    public void testChainKeyDerivationV3()  {
+    public void testChainKeyDerivationV3() {
 
         var seed = new byte[]{
                 (byte) 0x8a, (byte) 0xb7, (byte) 0x2d, (byte) 0x6f, (byte) 0x4c,
@@ -100,13 +102,13 @@ public class SignalChainKeyTest {
         var hkdf = HKDF.of(3);
         var chainKey = new SignalChainKeyBuilder()
                 .index(0)
-                .key(seed)
+                .key(new SecretKeySpec(seed, "AES"))
                 .build();
 
-        assertArrayEquals(chainKey.key(), seed);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).cipherKey(), messageKey);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).macKey(), macKey);
-        assertArrayEquals(chainKey.next().key(), nextChainKey);
+        assertArrayEquals(chainKey.key().getEncoded(), seed);
+        assertArrayEquals(chainKey.toMessageKeys(hkdf).cipherKey().getEncoded(), messageKey);
+        assertArrayEquals(chainKey.toMessageKeys(hkdf).macKey().getEncoded(), macKey);
+        assertArrayEquals(chainKey.next().key().getEncoded(), nextChainKey);
         assertEquals(0, chainKey.index());
         assertEquals(0, chainKey.toMessageKeys(hkdf).counter());
         assertEquals(1, chainKey.next().index());

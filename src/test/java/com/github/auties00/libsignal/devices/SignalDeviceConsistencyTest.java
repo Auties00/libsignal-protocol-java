@@ -3,6 +3,7 @@ package com.github.auties00.libsignal.devices;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.protocol.SignalDeviceConsistencyMessage;
+import com.github.auties00.libsignal.protocol.SignalDeviceConsistencyMessageBuilder;
 import com.github.auties00.libsignal.protocol.SignalDeviceConsistencyMessageSpec;
 import org.junit.jupiter.api.Test;
 
@@ -37,9 +38,18 @@ public class SignalDeviceConsistencyTest {
         assertArrayEquals(deviceOneCommitment.toSerialized(), deviceTwoCommitment.toSerialized());
         assertArrayEquals(deviceTwoCommitment.toSerialized(), deviceThreeCommitment.toSerialized());
 
-        var deviceOneMessage = new SignalDeviceConsistencyMessage(deviceOneCommitment, deviceOne);
-        var deviceTwoMessage = new SignalDeviceConsistencyMessage(deviceOneCommitment, deviceTwo);
-        var deviceThreeMessage = new SignalDeviceConsistencyMessage(deviceOneCommitment, deviceThree);
+        var deviceOneMessage = new SignalDeviceConsistencyMessageBuilder()
+                .commitment(deviceOneCommitment)
+                .identityKeyPair(deviceOne)
+                .build();
+        var deviceTwoMessage = new SignalDeviceConsistencyMessageBuilder()
+                .commitment(deviceTwoCommitment)
+                .identityKeyPair(deviceTwo)
+                .build();
+        var deviceThreeMessage = new SignalDeviceConsistencyMessageBuilder()
+                .commitment(deviceThreeCommitment)
+                .identityKeyPair(deviceThree)
+                .build();
 
         var receivedDeviceOneMessage = SignalDeviceConsistencyMessage.ofSerialized(SignalDeviceConsistencyMessageSpec.encode(deviceOneMessage), deviceOneCommitment, deviceOne);
         var receivedDeviceTwoMessage = SignalDeviceConsistencyMessage.ofSerialized(SignalDeviceConsistencyMessageSpec.encode(deviceTwoMessage), deviceTwoCommitment, deviceTwo);

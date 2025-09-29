@@ -7,6 +7,7 @@ import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.util.*;
 
 @ProtobufMessage
@@ -27,14 +28,14 @@ public final class SignalSenderKeyRecord {
     }
 
     public Optional<SignalSenderKeyState> findSenderKeyState() {
-        return senderKeyStates.get();
+        return senderKeyStates.getFirst();
     }
 
     public Optional<SignalSenderKeyState> findSenderKeyStateById(int keyId) {
         return senderKeyStates.get(keyId);
     }
 
-    public void addSenderKeyState(int id, int iteration, byte[] chainKey, SignalIdentityPublicKey signatureKey) {
+    public void addSenderKeyState(int id, int iteration, SecretKeySpec chainKey, SignalIdentityPublicKey signatureKey) {
         var senderChainKey = new SignalSenderChainKeyBuilder()
                 .iteration(iteration)
                 .seed(chainKey)
@@ -47,7 +48,7 @@ public final class SignalSenderKeyRecord {
         senderKeyStates.add(senderKeyState);
     }
 
-    public void setSenderKeyState(int id, int iteration, byte[] chainKey, SignalIdentityKeyPair signatureKey) {
+    public void setSenderKeyState(int id, int iteration, SecretKeySpec chainKey, SignalIdentityKeyPair signatureKey) {
         senderKeyStates.clear();
         var senderChainKey = new SignalSenderChainKeyBuilder()
                 .iteration(iteration)
@@ -80,7 +81,7 @@ public final class SignalSenderKeyRecord {
             this.backing = new LinkedHashMap<>(MAX_STATES, 0.75F, true);
         }
 
-        public Optional<SignalSenderKeyState> get() {
+        public Optional<SignalSenderKeyState> getFirst() {
             return backing.isEmpty()
                     ? Optional.empty()
                     : Optional.ofNullable(backing.firstEntry().getValue());

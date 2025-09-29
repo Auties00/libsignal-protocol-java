@@ -2,6 +2,7 @@ package com.github.auties00.libsignal.kdf;
 
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.Mac;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -31,13 +32,14 @@ public class HKDFTest {
                 (byte) 0x58, (byte) 0x65};
 
         var actualOutput = HKDF.of(3)
-                .deriveSecrets(ikm, salt, info, 42);
+                .deriveSecrets(Mac.getInstance("HmacSHA256"), ikm, salt, info, 42);
 
         assertArrayEquals(okm, actualOutput);
     }
 
+    @Test
     public void testVectorLongV3() throws NoSuchAlgorithmException, InvalidKeyException {
-        var ikm  = new byte[]{(byte) 0x00, (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04,
+        var ikm = new byte[]{(byte) 0x00, (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04,
                 (byte) 0x05, (byte) 0x06, (byte) 0x07, (byte) 0x08, (byte) 0x09,
                 (byte) 0x0a, (byte) 0x0b, (byte) 0x0c, (byte) 0x0d, (byte) 0x0e,
                 (byte) 0x0f, (byte) 0x10, (byte) 0x11, (byte) 0x12, (byte) 0x13,
@@ -88,7 +90,7 @@ public class HKDFTest {
                 (byte) 0xf6, (byte) 0xf7, (byte) 0xf8, (byte) 0xf9, (byte) 0xfa,
                 (byte) 0xfb, (byte) 0xfc, (byte) 0xfd, (byte) 0xfe, (byte) 0xff};
 
-        var okm  = new byte[]{(byte) 0xb1, (byte) 0x1e, (byte) 0x39, (byte) 0x8d, (byte) 0xc8,
+        var okm = new byte[]{(byte) 0xb1, (byte) 0x1e, (byte) 0x39, (byte) 0x8d, (byte) 0xc8,
                 (byte) 0x03, (byte) 0x27, (byte) 0xa1, (byte) 0xc8, (byte) 0xe7,
                 (byte) 0xf7, (byte) 0x8c, (byte) 0x59, (byte) 0x6a, (byte) 0x49,
                 (byte) 0x34, (byte) 0x4f, (byte) 0x01, (byte) 0x2e, (byte) 0xda,
@@ -107,7 +109,7 @@ public class HKDFTest {
                 (byte) 0x1d, (byte) 0x87};
 
         var actualOutput = HKDF.of(3)
-                .deriveSecrets(ikm, salt, info, 82);
+                .deriveSecrets(Mac.getInstance("HmacSHA256"), ikm, salt, info, 82);
         assertArrayEquals(okm, actualOutput);
     }
 
@@ -138,7 +140,7 @@ public class HKDFTest {
                 (byte) 0x99, (byte) 0xda, (byte) 0xeb, (byte) 0xec};
 
         var actualOutput = HKDF.of(2)
-                .deriveSecrets(ikm, salt, info, 64);
+                .deriveSecrets(Mac.getInstance("HmacSHA256"), ikm, salt, info, 64);
         assertArrayEquals(okm, actualOutput);
     }
 }

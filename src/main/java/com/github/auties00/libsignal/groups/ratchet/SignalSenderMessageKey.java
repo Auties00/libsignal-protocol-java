@@ -5,6 +5,7 @@ import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
 
+import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -28,12 +29,27 @@ public final class SignalSenderMessageKey {
 
     SignalSenderMessageKey(int iteration, byte[] seed) {
         try {
-            var chunks = HKDF.ofCurrent().deriveSecrets(seed, GROUP_INFO, 48);
+            var mac = Mac.getInstance("HmacSHA256");
+            var chunks = HKDF.ofCurrent()
+                    .deriveSecrets(mac, seed, GROUP_INFO, 48);
             this.iteration = iteration;
             this.seed = seed;
             this.iv = new IvParameterSpec(chunks, 0, 16);
             this.cipherKey = new SecretKeySpec(chunks, 16, 32, "AES");
-        } catch (GeneralSecurityException e) {
+        }catch (GeneralSecurityException e) {
+            throw new InternalError(e);
+        }
+    }
+
+    SignalSenderMessageKey(Mac mac, int iteration, byte[] seed) {
+        try {
+            var chunks = HKDF.ofCurrent()
+                    .deriveSecrets(mac, seed, GROUP_INFO, 48);
+            this.iteration = iteration;
+            this.seed = seed;
+            this.iv = new IvParameterSpec(chunks, 0, 16);
+            this.cipherKey = new SecretKeySpec(chunks, 16, 32, "AES");
+        }catch (GeneralSecurityException e) {
             throw new InternalError(e);
         }
     }

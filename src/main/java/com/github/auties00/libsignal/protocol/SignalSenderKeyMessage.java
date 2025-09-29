@@ -3,6 +3,7 @@ package com.github.auties00.libsignal.protocol;
 import com.github.auties00.curve25519.Curve25519;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
+import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
@@ -11,7 +12,7 @@ import it.auties.protobuf.stream.ProtobufOutputStream;
 
 import java.util.Arrays;
 
-@ProtobufMessage(name = "SenderKeyMessage")
+@ProtobufMessage(generateBuilder = false)
 public final class SignalSenderKeyMessage extends SignalCiphertextMessage {
     private static final Integer SIGNATURE_LENGTH = 64;
 
@@ -35,8 +36,8 @@ public final class SignalSenderKeyMessage extends SignalCiphertextMessage {
         this.cipherText = cipherText;
     }
 
-    // TODO: Use this constructor as the default builder and make it package private
-    public SignalSenderKeyMessage(Integer version, Integer id, Integer iteration, byte[] cipherText, SignalIdentityPrivateKey signaturePrivateKey) {
+    @ProtobufBuilder(className = "SignalSenderKeyMessageBuilder")
+    SignalSenderKeyMessage(Integer version, Integer id, Integer iteration, byte[] cipherText, SignalIdentityPrivateKey signaturePrivateKey) {
         this.version = version;
         this.id = id;
         this.iteration = iteration;

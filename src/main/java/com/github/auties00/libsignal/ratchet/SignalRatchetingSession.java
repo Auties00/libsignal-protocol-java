@@ -9,6 +9,8 @@ import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import com.github.auties00.libsignal.state.SignalSessionChainBuilder;
 import com.github.auties00.libsignal.state.SignalSessionState;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
@@ -19,7 +21,7 @@ public final class SignalRatchetingSession {
 
     private static final byte[] TEXT_INFO = "WhisperText".getBytes(StandardCharsets.UTF_8);
 
-    public static void initializeSession(SignalSessionState sessionState, SignalSymmetricParameters parameters) {
+    public static void initializeSession(Mac mac, SignalSessionState sessionState, SignalSymmetricParameters parameters) {
         if (isAlice(parameters.ourBaseKey().publicKey(), parameters.theirBaseKey())) {
             var aliceParameters = new SignalAliceParametersBuilder()
                     .ourBaseKey(parameters.ourBaseKey())
@@ -28,7 +30,7 @@ public final class SignalRatchetingSession {
                     .theirIdentityKey(parameters.theirIdentityKey())
                     .theirSignedPreKey(parameters.theirBaseKey())
                     .build();
-            initializeSession(sessionState, aliceParameters);
+            initializeSession(mac, sessionState, aliceParameters);
         } else {
             var bobParameters = new SignalBobParametersBuilder()
                     .ourIdentityKey(parameters.ourIdentityKey())
@@ -37,7 +39,7 @@ public final class SignalRatchetingSession {
                     .theirBaseKey(parameters.theirBaseKey())
                     .theirIdentityKey(parameters.theirIdentityKey())
                     .build();
-            initializeSession(sessionState, bobParameters);
+            initializeSession(mac, sessionState, bobParameters);
         }
     }
 
@@ -45,7 +47,7 @@ public final class SignalRatchetingSession {
         return ourKey.compareTo(theirKey) < 0;
     }
 
-    public static void initializeSession(SignalSessionState sessionState, SignalAliceParameters parameters) {
+    public static void initializeSession(Mac mac, SignalSessionState sessionState, SignalAliceParameters parameters) {
         try {
             sessionState.setSessionVersion(SignalCiphertextMessage.CURRENT_VERSION);
             sessionState.setRemoteIdentityPublic(parameters.theirIdentityKey());
@@ -68,11 +70,11 @@ public final class SignalRatchetingSession {
             }
 
             var derivedKeys = HKDF.ofCurrent()
-                    .deriveSecrets(secrets, TEXT_INFO, 64);
+                    .deriveSecrets(mac, secrets, TEXT_INFO, 64);
 
             var receiverRootKeyData = SignalIdentityPublicKey.ofCopy(derivedKeys, 0, 32);
             var receiverRootKey = SignalRootKey.of(receiverRootKeyData);
-            var receiverChainKeyData = Arrays.copyOfRange(derivedKeys, 32, 64);
+            var receiverChainKeyData = new SecretKeySpec(derivedKeys, 32, 32, "HmacSHA256");
             var receiverChainKey = new SignalChainKeyBuilder()
                     .key(receiverChainKeyData)
                     .index(0)
@@ -83,7 +85,7 @@ public final class SignalRatchetingSession {
                     .build());
 
             var hkdf = HKDF.of(sessionState.sessionVersion());
-            var sendingChain = receiverRootKey.createChain(hkdf, sendingRatchetKey.privateKey(), parameters.theirRatchetKey());
+            var sendingChain = receiverRootKey.createChain(hkdf, mac, sendingRatchetKey.privateKey(), parameters.theirRatchetKey());
             sessionState.setSenderChain(new SignalSessionChainBuilder()
                     .senderRatchetKey(sendingRatchetKey.publicKey())
                     .senderRatchetKeyPrivate(sendingRatchetKey.privateKey())
@@ -96,7 +98,7 @@ public final class SignalRatchetingSession {
         }
     }
 
-    public static void initializeSession(SignalSessionState sessionState, SignalBobParameters parameters) {
+    public static void initializeSession(Mac mac, SignalSessionState sessionState, SignalBobParameters parameters) {
         try {
             sessionState.setSessionVersion(SignalCiphertextMessage.CURRENT_VERSION);
             sessionState.setRemoteIdentityPublic(parameters.theirIdentityKey());
@@ -118,11 +120,11 @@ public final class SignalRatchetingSession {
             }
 
             var senderDerivedSecrets = HKDF.ofCurrent()
-                    .deriveSecrets(secrets, TEXT_INFO, 64);
+                    .deriveSecrets(mac, secrets, TEXT_INFO, 64);
 
             var senderRootKeyData = SignalIdentityPublicKey.ofCopy(senderDerivedSecrets, 0, 32);
             var senderRootKey = SignalRootKey.of(senderRootKeyData);
-            var senderChainKeyData = Arrays.copyOfRange(senderDerivedSecrets, 32, 64);
+            var senderChainKeyData = new SecretKeySpec(senderDerivedSecrets, 32, 32, "HmacSHA256");
             var senderChainKey = new SignalChainKeyBuilder()
                     .key(senderChainKeyData)
                     .index(0)

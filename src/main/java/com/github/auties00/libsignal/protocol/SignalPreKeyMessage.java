@@ -1,6 +1,7 @@
 package com.github.auties00.libsignal.protocol;
 
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
+import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
@@ -9,7 +10,7 @@ import it.auties.protobuf.stream.ProtobufOutputStream;
 
 import java.util.OptionalInt;
 
-@ProtobufMessage(name = "PreKeySignalMessage")
+@ProtobufMessage(generateBuilder = false)
 public final class SignalPreKeyMessage extends SignalCiphertextMessage {
     private Integer version;
 
@@ -41,8 +42,8 @@ public final class SignalPreKeyMessage extends SignalCiphertextMessage {
         this.signedPreKeyId = signedPreKeyId;
     }
 
-    // TODO: Use this constructor as the default builder and make it package private
-    public SignalPreKeyMessage(Integer version, Integer preKeyId, SignalIdentityPublicKey baseKey, SignalIdentityPublicKey identityKey, byte[] serializedSignalMessage, Integer registrationId, Integer signedPreKeyId) {
+    @ProtobufBuilder(className = "SignalPreKeyMessageBuilder")
+    SignalPreKeyMessage(Integer version, Integer preKeyId, SignalIdentityPublicKey baseKey, SignalIdentityPublicKey identityKey, byte[] serializedSignalMessage, Integer registrationId, Integer signedPreKeyId) {
         this.version = version;
         this.preKeyId = preKeyId;
         this.baseKey = baseKey;

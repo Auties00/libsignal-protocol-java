@@ -25,13 +25,10 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
-        var sentAliceDistributionMessage = aliceSessionBuilder.create(GROUP_SENDER);
+        var sentAliceDistributionMessage = aliceSignalGroupCipher.create(GROUP_SENDER);
         var receivedAliceDistributionMessage = SignalSenderKeyDistributionMessage.ofSerialized(sentAliceDistributionMessage.toSerialized());
 
         //    bobSessionBuilder.process(GROUP_SENDER, receivedAliceDistributionMessage);
@@ -50,15 +47,12 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
-        var sentAliceDistributionMessage = aliceSessionBuilder.create(GROUP_SENDER);
+        var sentAliceDistributionMessage = aliceSignalGroupCipher.create(GROUP_SENDER);
         var receivedAliceDistributionMessage = SignalSenderKeyDistributionMessage.ofSerialized(sentAliceDistributionMessage.toSerialized());
-        bobSessionBuilder.process(GROUP_SENDER, receivedAliceDistributionMessage);
+        bobSignalGroupCipher.process(GROUP_SENDER, receivedAliceDistributionMessage);
 
         var ciphertextFromAlice = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert".getBytes());
         var plaintextFromAlice = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertextFromAlice.toSerialized());
@@ -71,15 +65,12 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
-        var sentAliceDistributionMessage = aliceSessionBuilder.create(GROUP_SENDER);
+        var sentAliceDistributionMessage = aliceSignalGroupCipher.create(GROUP_SENDER);
         var receivedAliceDistributionMessage = SignalSenderKeyDistributionMessage.ofSerialized(sentAliceDistributionMessage.toSerialized());
-        bobSessionBuilder.process(GROUP_SENDER, receivedAliceDistributionMessage);
+        bobSignalGroupCipher.process(GROUP_SENDER, receivedAliceDistributionMessage);
 
         var plaintext = new byte[1024 * 1024];
         new Random().nextBytes(plaintext);
@@ -95,18 +86,15 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
         var sentAliceDistributionMessage =
-                aliceSessionBuilder.create(GROUP_SENDER);
+                aliceSignalGroupCipher.create(GROUP_SENDER);
         var receivedAliceDistributionMessage =
                 SignalSenderKeyDistributionMessage.ofSerialized(sentAliceDistributionMessage.toSerialized());
 
-        bobSessionBuilder.process(GROUP_SENDER, receivedAliceDistributionMessage);
+        bobSignalGroupCipher.process(GROUP_SENDER, receivedAliceDistributionMessage);
 
         var ciphertextFromAlice = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert".getBytes());
         var ciphertextFromAlice2 = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "smert ze smert2".getBytes());
@@ -134,12 +122,10 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
 
 
-        var aliceDistributionMessage = aliceSessionBuilder.create(GROUP_SENDER);
+        var aliceDistributionMessage = aliceSignalGroupCipher.create(GROUP_SENDER);
         // Send off to some people.
 
         for (var i = 0; i < 100; i++) {
@@ -147,12 +133,11 @@ public class SignalGroupSessionCipherTest {
         }
 
         // Now Bob Joins.
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
 
-        var distributionMessageToBob = aliceSessionBuilder.create(GROUP_SENDER);
-        bobSessionBuilder.process(GROUP_SENDER, SignalSenderKeyDistributionMessage.ofSerialized(distributionMessageToBob.toSerialized()));
+        var distributionMessageToBob = aliceSignalGroupCipher.create(GROUP_SENDER);
+        bobSignalGroupCipher.process(GROUP_SENDER, SignalSenderKeyDistributionMessage.ofSerialized(distributionMessageToBob.toSerialized()));
 
         var ciphertext = aliceSignalGroupCipher.encrypt(GROUP_SENDER, "welcome to the group".getBytes());
         var plaintext = bobSignalGroupCipher.decrypt(GROUP_SENDER, ciphertext.toSerialized());
@@ -166,16 +151,13 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
         var aliceDistributionMessage =
-                aliceSessionBuilder.create(GROUP_SENDER);
+                aliceSignalGroupCipher.create(GROUP_SENDER);
 
-        bobSessionBuilder.process(GROUP_SENDER, aliceDistributionMessage);
+        bobSignalGroupCipher.process(GROUP_SENDER, aliceDistributionMessage);
 
         var ciphertexts = new ArrayList<byte[]>(100);
 
@@ -212,15 +194,12 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
-        var aliceDistributionMessage = aliceSessionBuilder.create(GROUP_SENDER);
+        var aliceDistributionMessage = aliceSignalGroupCipher.create(GROUP_SENDER);
 
-        bobSessionBuilder.process(GROUP_SENDER, aliceDistributionMessage);
+        bobSignalGroupCipher.process(GROUP_SENDER, aliceDistributionMessage);
 
         for (var i = 0; i < 2001; i++) {
             aliceSignalGroupCipher.encrypt(GROUP_SENDER, "up the punks".getBytes());
@@ -240,15 +219,12 @@ public class SignalGroupSessionCipherTest {
         var aliceStore = new InMemorySignalProtocolStore();
         var bobStore = new InMemorySignalProtocolStore();
 
-        var aliceSessionBuilder = new SignalGroupSessionBuilder(aliceStore);
-        var bobSessionBuilder = new SignalGroupSessionBuilder(bobStore);
-
         var aliceSignalGroupCipher = new SignalGroupCipher(aliceStore);
         var bobSignalGroupCipher = new SignalGroupCipher(bobStore);
 
-        var aliceDistributionMessage = aliceSessionBuilder.create(GROUP_SENDER);
+        var aliceDistributionMessage = aliceSignalGroupCipher.create(GROUP_SENDER);
 
-        bobSessionBuilder.process(GROUP_SENDER, aliceDistributionMessage);
+        bobSignalGroupCipher.process(GROUP_SENDER, aliceDistributionMessage);
 
         List<byte[]> inflight = new LinkedList<>();
 

@@ -1,12 +1,13 @@
 package com.github.auties00.libsignal.groups.ratchet;
 
+import com.github.auties00.libsignal.mixins.HmacSha256KeySpecMixin;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -18,10 +19,10 @@ public final class SignalSenderChainKey {
     @ProtobufProperty(index = 1, type = ProtobufType.UINT32)
     final int iteration;
 
-    @ProtobufProperty(index = 2, type = ProtobufType.BYTES)
-    final byte[] seed;
+    @ProtobufProperty(index = 2, type = ProtobufType.BYTES, mixins = HmacSha256KeySpecMixin.class)
+    final SecretKeySpec seed;
 
-    SignalSenderChainKey(int iteration, byte[] seed) {
+    SignalSenderChainKey(int iteration, SecretKeySpec seed) {
         this.iteration = iteration;
         this.seed = seed;
     }
@@ -30,25 +31,26 @@ public final class SignalSenderChainKey {
         return iteration;
     }
 
-    public byte[] seed() {
+    public SecretKeySpec seed() {
         return seed;
     }
 
-    public SignalSenderMessageKey toSenderMessageKey() {
-        return new SignalSenderMessageKey(iteration, getDerivative(MESSAGE_KEY_SEED, seed));
-    }
-
-    public SignalSenderChainKey next() {
-        return new SignalSenderChainKey(iteration + 1, getDerivative(CHAIN_KEY_SEED, seed));
-    }
-
-    private byte[] getDerivative(byte[] seed, byte[] key) {
+    public SignalSenderMessageKey toSenderMessageKey(Mac mac) {
         try {
-            var mac = Mac.getInstance("HmacSHA256");
-            var keySpec = new SecretKeySpec(key, "HmacSHA256");
-            mac.init(keySpec);
-            return mac.doFinal(seed);
-        } catch (GeneralSecurityException e) {
+            mac.init(seed);
+            var messageKeySeed = mac.doFinal(MESSAGE_KEY_SEED);
+            return new SignalSenderMessageKey(mac, iteration, messageKeySeed);
+        } catch (InvalidKeyException e) {
+            throw new InternalError(e);
+        }
+    }
+
+    public SignalSenderChainKey next(Mac mac) {
+        try {
+            mac.init(seed);
+            var nextSeed = new SecretKeySpec(mac.doFinal(CHAIN_KEY_SEED), "HmacSHA256");
+            return new SignalSenderChainKey(iteration + 1, nextSeed);
+        } catch (InvalidKeyException e) {
             throw new InternalError(e);
         }
     }
@@ -56,9 +58,7 @@ public final class SignalSenderChainKey {
     @Override
     public boolean equals(Object obj) {
         return obj == this ||
-                obj instanceof SignalSenderChainKey that
-                        && this.iteration == that.iteration
-                        && Arrays.equals(this.seed, that.seed);
+                obj instanceof SignalSenderChainKey that && this.iteration == that.iteration;
     }
 
     @Override
@@ -70,6 +70,6 @@ public final class SignalSenderChainKey {
     public String toString() {
         return "SenderChainKey[" +
                 "iteration=" + iteration + ", " +
-                "seed=" + Arrays.toString(seed) + ']';
+                "seed=" + Arrays.toString(seed.getEncoded()) + ']';
     }
 }

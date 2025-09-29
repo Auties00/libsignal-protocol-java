@@ -186,7 +186,7 @@
         <sonatype.central.plugin.version>0.8.0</sonatype.central.plugin.version>
         <junit.version>5.8.2</junit.version>
         <java.version>21</java.version>
-        <protobuf.version>3.4.3</protobuf.version>
+        <protobuf.version>3.4.4</protobuf.version>
         <curve25519.version>3.0.1</curve25519.version>
         <compiler.plugin.version>3.11.0</compiler.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -242,6 +242,11 @@
         </dependency>
         <dependency>
             <groupId>com.github.auties00</groupId>
+            <artifactId>protobuf-serialization-plugin</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.auties00</groupId>
             <artifactId>curve25519</artifactId>
             <version>${curve25519.version}</version>
         </dependency>
@@ -269,6 +274,10 @@
             <version>1.37</version>
             <scope>test</scope>
         </dependency>
+        <!--
+        0.73.0 introduced quantum resistance to the protocol
+        This is not yet supported in the library, so 0.72.0 is the highest version we can test against.
+         -->
         <dependency>
             <groupId>org.signal</groupId>
             <artifactId>libsignal-client</artifactId>

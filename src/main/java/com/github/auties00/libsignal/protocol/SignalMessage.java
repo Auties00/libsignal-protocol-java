@@ -1,6 +1,7 @@
 package com.github.auties00.libsignal.protocol;
 
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
+import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
@@ -13,7 +14,7 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
-@ProtobufMessage(name = "SignalMessage")
+@ProtobufMessage(generateBuilder = false)
 public final class SignalMessage extends SignalCiphertextMessage {
     private static final Integer MAC_LENGTH = 8;
 
@@ -42,9 +43,9 @@ public final class SignalMessage extends SignalCiphertextMessage {
         // Don't set the mac, it will be set by ofSerialized
     }
 
-    // TODO: Use this constructor as the default builder
-    public SignalMessage(Integer version, SignalIdentityPublicKey senderRatchetKey, Integer counter, Integer previousCounter, byte[] ciphertext,
-                         SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey, byte[] macKey) {
+    @ProtobufBuilder(className = "SignalMessageBuilder")
+    SignalMessage(Integer version, SignalIdentityPublicKey senderRatchetKey, Integer counter, Integer previousCounter, byte[] ciphertext,
+                         SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey, SecretKeySpec macKey) {
         this.version = version;
         this.senderRatchetKey = senderRatchetKey;
         this.counter = counter;
@@ -92,7 +93,7 @@ public final class SignalMessage extends SignalCiphertextMessage {
         return serialized;
     }
 
-    public void verifyMac(SignalIdentityPublicKey senderIdentityPublicKey, SignalIdentityPublicKey receiverIdentityPublicKey, byte[] macKey) {
+    public void verifyMac(SignalIdentityPublicKey senderIdentityPublicKey, SignalIdentityPublicKey receiverIdentityPublicKey, SecretKeySpec macKey) {
         if (mac == null || mac.length != MAC_LENGTH) {
             throw new InternalError();
         }
@@ -103,7 +104,7 @@ public final class SignalMessage extends SignalCiphertextMessage {
         }
     }
 
-    private byte[] getMac(byte[] macKey, SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey) {
+    private byte[] getMac(SecretKeySpec macKey, SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey) {
         try {
             var macInput = new byte[SignalIdentityPublicKey.length() + SignalIdentityPublicKey.length() + 1 + SignalMessageSpec.sizeOf(this)];
             var offset = localIdentityKey.writeEncodedPoint(macInput, 0);
@@ -112,8 +113,7 @@ public final class SignalMessage extends SignalCiphertextMessage {
             SignalMessageSpec.encode(this, ProtobufOutputStream.toBytes(macInput, offset));
 
             var hmacSHA256 = Mac.getInstance("HmacSHA256");
-            var keySpec = new SecretKeySpec(macKey, "HmacSHA256");
-            hmacSHA256.init(keySpec);
+            hmacSHA256.init(macKey);
             var mac = hmacSHA256.doFinal(macInput);
 
             return Arrays.copyOf(mac, MAC_LENGTH);

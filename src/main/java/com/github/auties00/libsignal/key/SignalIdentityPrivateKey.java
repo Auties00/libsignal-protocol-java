@@ -50,10 +50,6 @@ public final class SignalIdentityPrivateKey implements SignalIdentityKey {
         return offset + length();
     }
 
-    public byte[] encodedPoint() {
-        return encodedPoint;
-    }
-
     @Override
     public boolean equals(Object obj) {
         return obj == this ||

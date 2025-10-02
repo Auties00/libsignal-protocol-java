@@ -3,6 +3,7 @@ package com.github.auties00.libsignal.kdf;
 import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 
 import javax.crypto.Mac;
+import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
 import java.util.Objects;
@@ -55,25 +56,32 @@ public final class HKDF {
 
     private byte[] expand(Mac mac, byte[] prk, byte[] info, int outputSize) throws InvalidKeyException {
         var iterations = (int) Math.ceil((double) outputSize / (double) HASH_OUTPUT_SIZE);
-        var mixin = new byte[0];
+        byte[] mixin = null;
         var result = new byte[outputSize];
         var remainingBytes = outputSize;
         var pos = 0;
+        var key = new SecretKeySpec(prk, "HmacSHA256");
+        var stepResult = new byte[32];
         for (var i = offset; i < iterations + offset; i++) {
-            mac.init(new SecretKeySpec(prk, "HmacSHA256"));
-            mac.update(mixin);
+            mac.init(key);
+            if(mixin != null) {
+                mac.update(mixin);
+            }
             if (info != null) {
                 mac.update(info);
             }
             mac.update((byte) i);
-            var stepResult = mac.doFinal();
+            try {
+                mac.doFinal(stepResult, 0);
+            }catch (ShortBufferException e) {
+                throw new InternalError(e);
+            }
             var stepSize = Math.min(remainingBytes, stepResult.length);
             System.arraycopy(stepResult, 0, result, pos, stepSize);
             pos += stepSize;
             remainingBytes -= stepSize;
             mixin = stepResult;
         }
-
         return result;
     }
 }

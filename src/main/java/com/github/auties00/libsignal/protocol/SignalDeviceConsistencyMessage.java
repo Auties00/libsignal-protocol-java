@@ -32,7 +32,7 @@ public final class SignalDeviceConsistencyMessage extends SignalPlaintextMessage
     @ProtobufBuilder(className = "SignalDeviceConsistencyMessageBuilder")
     SignalDeviceConsistencyMessage(SignalDeviceConsistencyCommitment commitment, SignalIdentityKeyPair identityKeyPair) {
         try {
-            var signatureBytes = Curve25519.signVrf(identityKeyPair.privateKey().encodedPoint(), commitment.toSerialized());
+            var signatureBytes = Curve25519.signVrf(identityKeyPair.privateKey().toEncodedPoint(), commitment.toSerialized());
             var vrfOutputBytes = Curve25519.verifyVrfSignature(identityKeyPair.publicKey().toEncodedPoint(), commitment.toSerialized(), signatureBytes);
             this.generation = commitment.generation();
             this.signature = signatureBytes;

@@ -106,9 +106,10 @@ public final class SignalMessage extends SignalCiphertextMessage {
 
     private byte[] getMac(SecretKeySpec macKey, SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey) {
         try {
-            var macInput = new byte[SignalIdentityPublicKey.length() + SignalIdentityPublicKey.length() + 1 + SignalMessageSpec.sizeOf(this)];
-            var offset = localIdentityKey.writeEncodedPoint(macInput, 0);
-            offset = remoteIdentityKey.writeEncodedPoint(macInput, SignalIdentityPublicKey.length());
+            var messageLength = SignalMessageSpec.sizeOf(this);
+            var macInput = new byte[SignalIdentityPublicKey.lengthWithType() + SignalIdentityPublicKey.lengthWithType() + 1 + messageLength];
+            var offset = localIdentityKey.writeEncodedPointWithType(macInput, 0);
+            offset = remoteIdentityKey.writeEncodedPointWithType(macInput, offset);
             macInput[offset++] = (byte) (version << 4 | CURRENT_VERSION);
             SignalMessageSpec.encode(this, ProtobufOutputStream.toBytes(macInput, offset));
 

@@ -1,13 +1,14 @@
 package com.github.auties00.libsignal.ratchet;
 
 import com.github.auties00.curve25519.Curve25519;
-import com.github.auties00.libsignal.kdf.HKDF;
+import com.github.auties00.libsignal.exception.SignalSessionInitializationException;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import com.github.auties00.libsignal.state.SignalSessionChainBuilder;
 import com.github.auties00.libsignal.state.SignalSessionState;
+import com.github.auties00.libsignal.util.HKDF;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,7 +22,7 @@ public final class SignalRatchetingSession {
 
     private static final byte[] TEXT_INFO = "WhisperText".getBytes(StandardCharsets.UTF_8);
 
-    public static void initializeSession(Mac mac, SignalSessionState sessionState, SignalSymmetricParameters parameters) {
+    public static void initializeSession(SignalSessionState sessionState, SignalSymmetricParameters parameters) {
         if (isAlice(parameters.ourBaseKey().publicKey(), parameters.theirBaseKey())) {
             var aliceParameters = new SignalAliceParametersBuilder()
                     .ourBaseKey(parameters.ourBaseKey())
@@ -30,7 +31,7 @@ public final class SignalRatchetingSession {
                     .theirIdentityKey(parameters.theirIdentityKey())
                     .theirSignedPreKey(parameters.theirBaseKey())
                     .build();
-            initializeSession(mac, sessionState, aliceParameters);
+            initializeSession(sessionState, aliceParameters);
         } else {
             var bobParameters = new SignalBobParametersBuilder()
                     .ourIdentityKey(parameters.ourIdentityKey())
@@ -39,7 +40,7 @@ public final class SignalRatchetingSession {
                     .theirBaseKey(parameters.theirBaseKey())
                     .theirIdentityKey(parameters.theirIdentityKey())
                     .build();
-            initializeSession(mac, sessionState, bobParameters);
+            initializeSession(sessionState, bobParameters);
         }
     }
 
@@ -47,7 +48,7 @@ public final class SignalRatchetingSession {
         return ourKey.compareTo(theirKey) < 0;
     }
 
-    public static void initializeSession(Mac mac, SignalSessionState sessionState, SignalAliceParameters parameters) {
+    public static void initializeSession(SignalSessionState sessionState, SignalAliceParameters parameters) {
         try {
             sessionState.setSessionVersion(SignalCiphertextMessage.CURRENT_VERSION);
             sessionState.setRemoteIdentityPublic(parameters.theirIdentityKey());
@@ -69,8 +70,8 @@ public final class SignalRatchetingSession {
                 throw new InternalError("Offset is not equal to the length of the array");
             }
 
-            var derivedKeys = HKDF.ofCurrent()
-                    .deriveSecrets(mac, secrets, TEXT_INFO, 64);
+            var mac = Mac.getInstance("HmacSHA256");
+            var derivedKeys = HKDF.deriveSecrets(sessionState.sessionVersion(), mac, secrets, TEXT_INFO, 64);
 
             var receiverRootKeyData = SignalIdentityPublicKey.ofCopy(derivedKeys, 0, 32);
             var receiverRootKey = SignalRootKey.of(receiverRootKeyData);
@@ -84,8 +85,7 @@ public final class SignalRatchetingSession {
                     .chainKey(receiverChainKey)
                     .build());
 
-            var hkdf = HKDF.of(sessionState.sessionVersion());
-            var sendingChain = receiverRootKey.createChain(hkdf, mac, sendingRatchetKey.privateKey(), parameters.theirRatchetKey());
+            var sendingChain = receiverRootKey.createChain(sessionState.sessionVersion(), mac, sendingRatchetKey.privateKey(), parameters.theirRatchetKey());
             sessionState.setSenderChain(new SignalSessionChainBuilder()
                     .senderRatchetKey(sendingRatchetKey.publicKey())
                     .senderRatchetKeyPrivate(sendingRatchetKey.privateKey())
@@ -94,11 +94,11 @@ public final class SignalRatchetingSession {
 
             sessionState.setRootKey(sendingChain.rootKey());
         } catch (GeneralSecurityException exception) {
-            throw new InternalError(exception);
+            throw new SignalSessionInitializationException(exception);
         }
     }
 
-    public static void initializeSession(Mac mac, SignalSessionState sessionState, SignalBobParameters parameters) {
+    public static void initializeSession(SignalSessionState sessionState, SignalBobParameters parameters) {
         try {
             sessionState.setSessionVersion(SignalCiphertextMessage.CURRENT_VERSION);
             sessionState.setRemoteIdentityPublic(parameters.theirIdentityKey());
@@ -119,8 +119,8 @@ public final class SignalRatchetingSession {
                 throw new InternalError("Offset is not equal to the length of the array");
             }
 
-            var senderDerivedSecrets = HKDF.ofCurrent()
-                    .deriveSecrets(mac, secrets, TEXT_INFO, 64);
+            var mac = Mac.getInstance("HmacSHA256");
+            var senderDerivedSecrets = HKDF.deriveSecrets(sessionState.sessionVersion(), mac, secrets, TEXT_INFO, 64);
 
             var senderRootKeyData = SignalIdentityPublicKey.ofCopy(senderDerivedSecrets, 0, 32);
             var senderRootKey = SignalRootKey.of(senderRootKeyData);
@@ -138,7 +138,7 @@ public final class SignalRatchetingSession {
 
             sessionState.setRootKey(senderRootKey);
         } catch (GeneralSecurityException e) {
-            throw new InternalError(e);
+            throw new SignalSessionInitializationException(e);
         }
     }
 

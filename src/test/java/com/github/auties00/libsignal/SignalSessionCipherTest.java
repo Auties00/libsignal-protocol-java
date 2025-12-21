@@ -18,7 +18,6 @@ import com.github.auties00.libsignal.state.SignalSessionState;
 import org.apache.commons.math3.util.Pair;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.Mac;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -176,9 +175,8 @@ public class SignalSessionCipherTest {
                 .theirBaseKey(aliceBaseKey.publicKey())
                 .build();
 
-        var mac = Mac.getInstance("HmacSHA256");
-        SignalRatchetingSession.initializeSession(mac, aliceSessionState, aliceParameters);
-        SignalRatchetingSession.initializeSession(mac, bobSessionState, bobParameters);
+        SignalRatchetingSession.initializeSession(aliceSessionState, aliceParameters);
+        SignalRatchetingSession.initializeSession(bobSessionState, bobParameters);
     }
 
     @Test

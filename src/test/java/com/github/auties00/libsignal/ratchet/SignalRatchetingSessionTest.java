@@ -7,16 +7,14 @@ import com.github.auties00.libsignal.state.SignalSessionChain;
 import com.github.auties00.libsignal.state.SignalSessionState;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.security.NoSuchAlgorithmException;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SignalRatchetingSessionTest {
     @Test
-    public void testRatchetingSessionAsBob() throws NoSuchAlgorithmException {
+    public void testRatchetingSessionAsBob() {
         var bobPublic = new byte[]{(byte) 0x05, (byte) 0x2c, (byte) 0xb4, (byte) 0x97,
                 (byte) 0x76, (byte) 0xb8, (byte) 0x77, (byte) 0x02,
                 (byte) 0x05, (byte) 0x74, (byte) 0x5a, (byte) 0x3a,
@@ -133,7 +131,7 @@ public class SignalRatchetingSessionTest {
 
         var session = new SignalSessionState();
 
-        SignalRatchetingSession.initializeSession(Mac.getInstance("HmacSHA256"), session, parameters);
+        SignalRatchetingSession.initializeSession(session, parameters);
 
         assertEquals(session.localIdentityPublic(), bobIdentityKey.publicKey());
         assertEquals(session.remoteIdentityPublic(), aliceIdentityPublicKey);
@@ -146,7 +144,7 @@ public class SignalRatchetingSessionTest {
     }
 
     @Test
-    public void testRatchetingSessionAsAlice() throws NoSuchAlgorithmException {
+    public void testRatchetingSessionAsAlice() {
         var bobPublic = new byte[]{(byte) 0x05, (byte) 0x2c, (byte) 0xb4, (byte) 0x97, (byte) 0x76,
                 (byte) 0xb8, (byte) 0x77, (byte) 0x02, (byte) 0x05, (byte) 0x74,
                 (byte) 0x5a, (byte) 0x3a, (byte) 0x6e, (byte) 0x24, (byte) 0xf5,
@@ -251,7 +249,7 @@ public class SignalRatchetingSessionTest {
                 .theirOneTimePreKey((SignalIdentityPublicKey) null)
                 .build();
 
-        SignalRatchetingSession.initializeSession(Mac.getInstance("HmacSHA256"), session, parameters);
+        SignalRatchetingSession.initializeSession(session, parameters);
 
         assertEquals(session.localIdentityPublic(), aliceIdentityKey.publicKey());
         assertEquals(session.remoteIdentityPublic(), bobIdentityKey);

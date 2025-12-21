@@ -1,16 +1,16 @@
 package com.github.auties00.libsignal.ratchet;
 
 import com.github.auties00.curve25519.Curve25519;
-import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
+import com.github.auties00.libsignal.util.HKDF;
 import it.auties.protobuf.annotation.ProtobufDeserializer;
 import it.auties.protobuf.annotation.ProtobufSerializer;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 
 
 public final class SignalRootKey {
@@ -36,16 +36,16 @@ public final class SignalRootKey {
         return key;
     }
 
-    public Chain createChain(HKDF hkdf, Mac mac, SignalIdentityPrivateKey ourRatchetKey, SignalIdentityPublicKey theirRatchetKey) {
+    public Chain createChain(int version, Mac mac, SignalIdentityPrivateKey ourRatchetKey, SignalIdentityPublicKey theirRatchetKey) {
         try {
             var sharedSecret = Curve25519.sharedKey(ourRatchetKey.toEncodedPoint(), theirRatchetKey.toEncodedPoint());
-            var senderDerivedSecrets = hkdf.deriveSecrets(mac, sharedSecret, key.toEncodedPoint(), CHAIN_INFO, 64);
+            var senderDerivedSecrets = HKDF.deriveSecrets(version, mac, sharedSecret, key.toEncodedPoint(), CHAIN_INFO, 64);
             var rootKeyData = SignalIdentityPublicKey.ofCopy(senderDerivedSecrets, 0, 32);
             var rootKey = new SignalRootKey(rootKeyData);
             var chainKeyData = new SecretKeySpec(senderDerivedSecrets, 32, 32, "HmacSHA256");
             var senderChainKey = new SignalChainKey(0, chainKeyData);
             return new Chain(rootKey, senderChainKey);
-        } catch (GeneralSecurityException e) {
+        }catch (InvalidKeyException e) {
             throw new InternalError(e);
         }
     }

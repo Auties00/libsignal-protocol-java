@@ -1,7 +1,7 @@
 package com.github.auties00.libsignal.ratchet;
 
-import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.mixins.HmacSha256KeySpecMixin;
+import com.github.auties00.libsignal.util.HKDF;
 import it.auties.protobuf.annotation.ProtobufMessage;
 import it.auties.protobuf.annotation.ProtobufProperty;
 import it.auties.protobuf.model.ProtobufType;
@@ -10,9 +10,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
 @ProtobufMessage
 public final class SignalChainKey {
@@ -39,15 +37,6 @@ public final class SignalChainKey {
         return key;
     }
 
-    public SignalChainKey next() {
-        try {
-            var mac = Mac.getInstance("HmacSHA256");
-            return next(mac);
-        }catch (NoSuchAlgorithmException e) {
-            throw new InternalError(e);
-        }
-    }
-
     public SignalChainKey next(Mac mac) {
         try {
             mac.init(key);
@@ -58,20 +47,11 @@ public final class SignalChainKey {
         }
     }
 
-    public SignalMessageKey toMessageKeys(HKDF hkdf) {
-        try {
-            var mac = Mac.getInstance("HmacSHA256");
-            return toMessageKeys(hkdf, mac);
-        }catch (GeneralSecurityException e) {
-            throw new InternalError(e);
-        }
-    }
-
-    public SignalMessageKey toMessageKeys(HKDF hkdf, Mac mac) {
+    public SignalMessageKey toMessageKeys(int version, Mac mac) {
         try {
             mac.init(key);
             var inputKeyMaterial = mac.doFinal(MESSAGE_KEY_SEED);
-            var data = hkdf.deriveSecrets(mac, inputKeyMaterial, MESSAGE_KEY_INFO, 80);
+            var data = HKDF.deriveSecrets(version, mac, inputKeyMaterial, MESSAGE_KEY_INFO, 80);
             var cipherKey = new SecretKeySpec(data, 0, 32, "AES");
             var macKey = new SecretKeySpec(data, 32, 32, "HmacSHA256");
             var iv = new IvParameterSpec(data, 64,  16);

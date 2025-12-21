@@ -39,7 +39,7 @@ public final class SignalSenderChainKey {
         try {
             mac.init(seed);
             var messageKeySeed = mac.doFinal(MESSAGE_KEY_SEED);
-            return new SignalSenderMessageKey(mac, iteration, messageKeySeed);
+            return new SignalSenderMessageKey(iteration, messageKeySeed);
         } catch (InvalidKeyException e) {
             throw new InternalError(e);
         }

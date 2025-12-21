@@ -17,6 +17,7 @@ import java.util.Arrays;
 @ProtobufMessage(generateBuilder = false)
 public final class SignalMessage extends SignalCiphertextMessage {
     private static final Integer MAC_LENGTH = 8;
+    private static final String MAC_ALGORITHM = "HmacSHA256";
 
     private Integer version;
 
@@ -44,14 +45,14 @@ public final class SignalMessage extends SignalCiphertextMessage {
     }
 
     @ProtobufBuilder(className = "SignalMessageBuilder")
-    SignalMessage(Integer version, SignalIdentityPublicKey senderRatchetKey, Integer counter, Integer previousCounter, byte[] ciphertext,
+    SignalMessage(Mac hmacSha256, Integer version, SignalIdentityPublicKey senderRatchetKey, Integer counter, Integer previousCounter, byte[] ciphertext,
                          SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey, SecretKeySpec macKey) {
         this.version = version;
         this.senderRatchetKey = senderRatchetKey;
         this.counter = counter;
         this.previousCounter = previousCounter;
         this.ciphertext = ciphertext;
-        this.mac = getMac(macKey, localIdentityKey, remoteIdentityKey);
+        this.mac = getMac(hmacSha256, macKey, localIdentityKey, remoteIdentityKey);
     }
 
     public static SignalMessage ofSerialized(byte[] serialized) {
@@ -93,18 +94,23 @@ public final class SignalMessage extends SignalCiphertextMessage {
         return serialized;
     }
 
-    public void verifyMac(SignalIdentityPublicKey senderIdentityPublicKey, SignalIdentityPublicKey receiverIdentityPublicKey, SecretKeySpec macKey) {
+    public void verifyMac(Mac hmacSha256, SignalIdentityPublicKey senderIdentityPublicKey, SignalIdentityPublicKey receiverIdentityPublicKey, SecretKeySpec macKey) {
+        if(hmacSha256 == null || !MAC_ALGORITHM.equals(hmacSha256.getAlgorithm())) {
+            throw new IllegalArgumentException("Invalid hmacSha256 instance");
+        }
+
         if (mac == null || mac.length != MAC_LENGTH) {
             throw new InternalError();
         }
+
         var theirMac = mac;
-        var ourMac = getMac(macKey, senderIdentityPublicKey, receiverIdentityPublicKey);
+        var ourMac = getMac(hmacSha256, macKey, senderIdentityPublicKey, receiverIdentityPublicKey);
         if (!MessageDigest.isEqual(theirMac, ourMac)) {
             throw new SecurityException("Bad Mac!");
         }
     }
 
-    private byte[] getMac(SecretKeySpec macKey, SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey) {
+    private byte[] getMac(Mac hmacSha256, SecretKeySpec macKey, SignalIdentityPublicKey localIdentityKey, SignalIdentityPublicKey remoteIdentityKey) {
         try {
             var messageLength = SignalMessageSpec.sizeOf(this);
             var macInput = new byte[SignalIdentityPublicKey.lengthWithType() + SignalIdentityPublicKey.lengthWithType() + 1 + messageLength];
@@ -113,9 +119,8 @@ public final class SignalMessage extends SignalCiphertextMessage {
             macInput[offset++] = (byte) (version << 4 | CURRENT_VERSION);
             SignalMessageSpec.encode(this, ProtobufOutputStream.toBytes(macInput, offset));
 
-            var hmacSHA256 = Mac.getInstance("HmacSHA256");
-            hmacSHA256.init(macKey);
-            var mac = hmacSHA256.doFinal(macInput);
+            hmacSha256.init(macKey);
+            var mac = hmacSha256.doFinal(macInput);
 
             return Arrays.copyOf(mac, MAC_LENGTH);
         } catch (GeneralSecurityException exception) {

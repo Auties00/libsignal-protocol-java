@@ -1,16 +1,17 @@
 package com.github.auties00.libsignal.ratchet;
 
-import com.github.auties00.libsignal.kdf.HKDF;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.NoSuchAlgorithmException;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SignalChainKeyTest {
     @Test
-    public void testChainKeyDerivationV2() {
+    public void testChainKeyDerivationV2() throws NoSuchAlgorithmException {
         var seed = new byte[]{(byte) 0x8a, (byte) 0xb7, (byte) 0x2d, (byte) 0x6f, (byte) 0x4c,
                 (byte) 0xc5, (byte) 0xac, (byte) 0x0d, (byte) 0x38, (byte) 0x7e,
                 (byte) 0xaf, (byte) 0x46, (byte) 0x33, (byte) 0x78, (byte) 0xdd,
@@ -43,24 +44,25 @@ public class SignalChainKeyTest {
                 (byte) 0xc1, (byte) 0x03, (byte) 0x42, (byte) 0xa2, (byte) 0x46,
                 (byte) 0xd1, (byte) 0x5d};
 
-        var hkdf = HKDF.of(2);
+        var mac = Mac.getInstance("HmacSHA256");
+        var sessionVersion = 2;
         var chainKey = new SignalChainKeyBuilder()
                 .index(0)
                 .key(new SecretKeySpec(seed, "AES"))
                 .build();
 
         assertArrayEquals(chainKey.key().getEncoded(), seed);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).cipherKey().getEncoded(), messageKey);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).macKey().getEncoded(), macKey);
-        assertArrayEquals(chainKey.next().key().getEncoded(), nextChainKey);
+        assertArrayEquals(chainKey.toMessageKeys(sessionVersion, mac).cipherKey().getEncoded(), messageKey);
+        assertArrayEquals(chainKey.toMessageKeys(sessionVersion, mac).macKey().getEncoded(), macKey);
+        assertArrayEquals(chainKey.next(mac).key().getEncoded(), nextChainKey);
         assertEquals(0, chainKey.index());
-        assertEquals(0, chainKey.toMessageKeys(hkdf).counter());
-        assertEquals(1, chainKey.next().index());
-        assertEquals(1, chainKey.next().toMessageKeys(hkdf).counter());
+        assertEquals(0, chainKey.toMessageKeys(sessionVersion, mac).counter());
+        assertEquals(1, chainKey.next(mac).index());
+        assertEquals(1, chainKey.next(mac).toMessageKeys(sessionVersion, mac).counter());
     }
 
     @Test
-    public void testChainKeyDerivationV3() {
+    public void testChainKeyDerivationV3() throws NoSuchAlgorithmException {
 
         var seed = new byte[]{
                 (byte) 0x8a, (byte) 0xb7, (byte) 0x2d, (byte) 0x6f, (byte) 0x4c,
@@ -99,19 +101,20 @@ public class SignalChainKeyTest {
                 (byte) 0xc1, (byte) 0x03, (byte) 0x42, (byte) 0xa2, (byte) 0x46,
                 (byte) 0xd1, (byte) 0x5d};
 
-        var hkdf = HKDF.of(3);
+        var mac = Mac.getInstance("HmacSHA256");
+        var sessionVersion = 3;
         var chainKey = new SignalChainKeyBuilder()
                 .index(0)
                 .key(new SecretKeySpec(seed, "AES"))
                 .build();
 
         assertArrayEquals(chainKey.key().getEncoded(), seed);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).cipherKey().getEncoded(), messageKey);
-        assertArrayEquals(chainKey.toMessageKeys(hkdf).macKey().getEncoded(), macKey);
-        assertArrayEquals(chainKey.next().key().getEncoded(), nextChainKey);
+        assertArrayEquals(chainKey.toMessageKeys(sessionVersion, mac).cipherKey().getEncoded(), messageKey);
+        assertArrayEquals(chainKey.toMessageKeys(sessionVersion, mac).macKey().getEncoded(), macKey);
+        assertArrayEquals(chainKey.next(mac).key().getEncoded(), nextChainKey);
         assertEquals(0, chainKey.index());
-        assertEquals(0, chainKey.toMessageKeys(hkdf).counter());
-        assertEquals(1, chainKey.next().index());
-        assertEquals(1, chainKey.next().toMessageKeys(hkdf).counter());
+        assertEquals(0, chainKey.toMessageKeys(sessionVersion, mac).counter());
+        assertEquals(1, chainKey.next(mac).index());
+        assertEquals(1, chainKey.next(mac).toMessageKeys(sessionVersion, mac).counter());
     }
 }

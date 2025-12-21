@@ -1,6 +1,5 @@
 package com.github.auties00.libsignal.ratchet;
 
-import com.github.auties00.libsignal.kdf.HKDF;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
@@ -70,7 +69,7 @@ public class SignalRootKeyTest {
         var rootKey = SignalRootKey.of(SignalIdentityPublicKey.ofDirect(rootKeySeed));
 
         var mac = Mac.getInstance("HmacSHA256");
-        var rootKeyChainKeyPair = rootKey.createChain(HKDF.of(2), mac, aliceKeyPair.privateKey(), bobPublicKey);
+        var rootKeyChainKeyPair = rootKey.createChain(2, mac, aliceKeyPair.privateKey(), bobPublicKey);
         var nextRootKey = rootKeyChainKeyPair.rootKey();
         var nextChainKey = rootKeyChainKeyPair.chainKey();
 

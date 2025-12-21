@@ -1,7 +1,7 @@
 package com.github.auties00.libsignal;
 
 import com.github.auties00.curve25519.Curve25519;
-import com.github.auties00.libsignal.kdf.HKDF;
+import com.github.auties00.libsignal.exception.*;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.key.SignalKeyDirection;
@@ -11,9 +11,7 @@ import com.github.auties00.libsignal.state.*;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
-import javax.crypto.NoSuchPaddingException;
 import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.OptionalInt;
@@ -22,83 +20,82 @@ public final class SignalSessionCipher {
     private static final int MAX_MESSAGE_KEYS = 2000;
 
     private final SignalProtocolStore store;
-    private final Cipher cipher;
-    private final Mac mac;
 
     public SignalSessionCipher(SignalProtocolStore store) {
         this.store = store;
-        try {
-            this.cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            this.mac = Mac.getInstance("HmacSHA256");
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-            throw new InternalError(e);
-        }
     }
 
     public SignalCiphertextMessage encrypt(SignalProtocolAddress remoteAddress, byte[] paddedMessage) {
-        var sessionRecord = store.findSessionByAddress(remoteAddress)
-                .orElseThrow(() -> new SecurityException("No session for: " + remoteAddress));
-        var sessionState = sessionRecord.sessionState();
-        var sessionChain = sessionState.senderChain()
-                .orElseThrow(() -> new IllegalStateException("Uninitialized session for " + remoteAddress));
-        var chainKey = sessionChain.chainKey();
-        var hkdf = HKDF.of(sessionState.sessionVersion());
-        var messageKeys = chainKey.toMessageKeys(hkdf, mac);
-        var senderEphemeral = sessionChain.senderRatchetKey();
-        var previousCounter = sessionState.previousCounter();
-        var sessionVersion = sessionState.sessionVersion();
+        try {
+            var mac = Mac.getInstance("HmacSHA256");
 
-        var ciphertextBody = getCiphertext(messageKeys, paddedMessage);
-        SignalCiphertextMessage ciphertextMessage = new SignalMessageBuilder()
-                .version(sessionVersion)
-                .senderRatchetKey(senderEphemeral)
-                .counter(chainKey.index())
-                .previousCounter(previousCounter)
-                .ciphertext(ciphertextBody)
-                .localIdentityKey(sessionState.localIdentityPublic())
-                .remoteIdentityKey(sessionState.remoteIdentityPublic())
-                .macKey(messageKeys.macKey())
-                .build();
-        var pendingPreKey = sessionState.pendingPreKey();
-        if (pendingPreKey.isPresent()) {
-            var localRegistrationId = sessionState.localRegistrationId();
-            ciphertextMessage = new SignalPreKeyMessageBuilder()
+            var sessionRecord = store.findSessionByAddress(remoteAddress)
+                    .orElseThrow(() -> new SignalMissingSessionException(remoteAddress));
+            var sessionState = sessionRecord.sessionState();
+            var sessionChain = sessionState.senderChain()
+                    .orElseThrow(() -> new SignalUninitializedSessionException(remoteAddress));
+            var chainKey = sessionChain.chainKey();
+            var sessionVersion = sessionState.sessionVersion();
+            var messageKeys = chainKey.toMessageKeys(sessionVersion, mac);
+            var senderEphemeral = sessionChain.senderRatchetKey();
+            var previousCounter = sessionState.previousCounter();
+
+            var ciphertextBody = getCiphertext(messageKeys, paddedMessage);
+            SignalCiphertextMessage ciphertextMessage = new SignalMessageBuilder()
+                    .hmacSha256(mac)
                     .version(sessionVersion)
-                    .preKeyId(pendingPreKey.get().preKeyId())
-                    .baseKey(pendingPreKey.get().baseKey())
-                    .identityKey(sessionState.localIdentityPublic())
-                    .serializedSignalMessage(ciphertextMessage.toSerialized())
-                    .registrationId(localRegistrationId)
-                    .signedPreKeyId(pendingPreKey.get().signedKeyId())
+                    .senderRatchetKey(senderEphemeral)
+                    .counter(chainKey.index())
+                    .previousCounter(previousCounter)
+                    .ciphertext(ciphertextBody)
+                    .localIdentityKey(sessionState.localIdentityPublic())
+                    .remoteIdentityKey(sessionState.remoteIdentityPublic())
+                    .macKey(messageKeys.macKey())
                     .build();
+            var pendingPreKey = sessionState.pendingPreKey();
+            if (pendingPreKey.isPresent()) {
+                var localRegistrationId = sessionState.localRegistrationId();
+                ciphertextMessage = new SignalPreKeyMessageBuilder()
+                        .version(sessionVersion)
+                        .preKeyId(pendingPreKey.get().preKeyId())
+                        .baseKey(pendingPreKey.get().baseKey())
+                        .identityKey(sessionState.localIdentityPublic())
+                        .serializedSignalMessage(ciphertextMessage.toSerialized())
+                        .registrationId(localRegistrationId)
+                        .signedPreKeyId(pendingPreKey.get().signedKeyId())
+                        .build();
+            }
+
+            var result = chainKey.next(mac);
+            sessionChain.setChainKey(result);
+
+            if (!store.isTrustedIdentity(remoteAddress, sessionState.remoteIdentityPublic(), SignalKeyDirection.OUTGOING)) {
+                throw new SignalUntrustedIdentityException(remoteAddress);
+            }
+
+            store.addTrustedIdentity(remoteAddress, sessionState.remoteIdentityPublic());
+
+            sessionRecord.setFresh(false);
+            store.addSession(remoteAddress, sessionRecord);
+
+            return ciphertextMessage;
+        }catch (GeneralSecurityException exception) {
+            throw new SignalEncryptException(exception);
         }
-
-        sessionChain.setChainKey(chainKey.next());
-
-        if (!store.isTrustedIdentity(remoteAddress, sessionState.remoteIdentityPublic(), SignalKeyDirection.OUTGOING)) {
-            throw new SecurityException("Untrusted identity: " + remoteAddress.name());
-        }
-
-        store.addTrustedIdentity(remoteAddress, sessionState.remoteIdentityPublic());
-
-        sessionRecord.setFresh(false);
-        store.addSession(remoteAddress, sessionRecord);
-
-        return ciphertextMessage;
     }
 
     public byte[] decrypt(SignalProtocolAddress remoteAddress, SignalPreKeyMessage ciphertext) {
         var sessionRecord = store.findSessionByAddress(remoteAddress)
                 .orElseGet(SignalSessionRecord::new);
         var unsignedPreKeyId = process(remoteAddress, sessionRecord, ciphertext);
-        var plaintext = decrypt(sessionRecord, ciphertext.signalMessage());
+        var plaintext = decrypt(remoteAddress, sessionRecord, ciphertext.signalMessage());
 
         sessionRecord.setFresh(false);
         store.addSession(remoteAddress, sessionRecord);
 
         if (unsignedPreKeyId.isPresent()) {
             if (!store.removePreKey(unsignedPreKeyId.getAsInt())) {
-                throw new InternalError("Key was not removed");
+                throw new SignalDecryptException("Key was not removed");
             }
         }
 
@@ -107,11 +104,11 @@ public final class SignalSessionCipher {
 
     public byte[] decrypt(SignalProtocolAddress remoteAddress, SignalMessage ciphertext) {
         var sessionRecord = store.findSessionByAddress(remoteAddress)
-                .orElseThrow(() -> new SecurityException("No session for: " + remoteAddress));
-        var plaintext = decrypt(sessionRecord, ciphertext);
+                .orElseThrow(() -> new SignalMissingSessionException(remoteAddress));
+        var plaintext = decrypt(remoteAddress, sessionRecord, ciphertext);
         var theirIdentityKey = sessionRecord.sessionState().remoteIdentityPublic();
         if (!store.isTrustedIdentity(remoteAddress, theirIdentityKey, SignalKeyDirection.INCOMING)) {
-            throw new SecurityException("Untrusted identity: " + remoteAddress.name());
+            throw new SignalUntrustedIdentityException(remoteAddress);
         }
 
         store.addTrustedIdentity(remoteAddress, theirIdentityKey);
@@ -122,29 +119,26 @@ public final class SignalSessionCipher {
         return plaintext;
     }
 
-    private byte[] decrypt(SignalSessionRecord sessionRecord, SignalMessage ciphertext) {
-        var errors = 0;
+    private byte[] decrypt(SignalProtocolAddress remoteAddress, SignalSessionRecord sessionRecord, SignalMessage ciphertext) {
         var currentSessionState = sessionRecord.sessionState();
-        var currentSessionResult = tryDecrypt(currentSessionState, ciphertext);
+        var currentSessionResult = tryDecrypt(remoteAddress, currentSessionState, ciphertext);
         if(currentSessionResult != null) {
             sessionRecord.setState(currentSessionState);
             return currentSessionResult;
         }
 
-        errors++;
-
         for (var promotedState : sessionRecord.previousSessionStates()) {
-            var promotedStateResult = tryDecrypt(promotedState, ciphertext);
+            var promotedStateResult = tryDecrypt(remoteAddress, promotedState, ciphertext);
             if(promotedStateResult != null) {
                 sessionRecord.promoteState(promotedState);
                 return promotedStateResult;
             }
         }
 
-        throw new SecurityException("No valid sessions. Errors: " + errors);
+        throw new SignalDecryptException("No valid sessions to decrypt message from " + remoteAddress);
     }
 
-    private byte[] tryDecrypt(SignalSessionState state, SignalMessage ciphertext) {
+    private byte[] tryDecrypt(SignalProtocolAddress remoteAddress, SignalSessionState state, SignalMessage ciphertext) {
         // Store all the data that could change
         var savedSessionVersion = state.sessionVersion();
         var savedLocalIdentityPublic = state.localIdentityPublic();
@@ -169,7 +163,7 @@ public final class SignalSessionCipher {
         }
 
         try {
-            return decrypt(state, ciphertext);
+            return decrypt(remoteAddress, state, ciphertext);
         } catch (Throwable e) {
             state.setSessionVersion(savedSessionVersion);
             state.setLocalIdentityPublic(savedLocalIdentityPublic);
@@ -186,7 +180,8 @@ public final class SignalSessionCipher {
                 savedSenderChain.setChainKey(savedSenderChainKey);
             }
             state.setSenderChain(savedSenderChain);
-            for (var i = 0; i < savedReceiverChains.size(); i++) {
+            var size = savedReceiverChains.size();
+            for (var i = 0; i < size; i++) {
                 var chain = savedReceiverChains.get(i);
 
                 var originalChainKey = savedReceiverChainKeys.get(i);
@@ -200,46 +195,53 @@ public final class SignalSessionCipher {
         }
     }
 
-    private byte[] decrypt(SignalSessionState sessionState, SignalMessage ciphertextMessage) {
-        if (sessionState.senderChain().isEmpty()) {
-            throw new IllegalStateException("Uninitialized session!");
+    private byte[] decrypt(SignalProtocolAddress remoteAddress, SignalSessionState sessionState, SignalMessage ciphertextMessage) {
+        try {
+            if (sessionState.senderChain().isEmpty()) {
+                throw new SignalUninitializedSessionException(remoteAddress);
+            }
+
+            if (!Objects.equals(ciphertextMessage.version(), sessionState.sessionVersion())) {
+                throw new SignalDecryptException(String.format("Message version %d, but session version %d",
+                        ciphertextMessage.version(),
+                        sessionState.sessionVersion()));
+            }
+
+            var mac = Mac.getInstance("HmacSHA256");
+
+            var theirEphemeral = ciphertextMessage.senderRatchetKey();
+            var counter = ciphertextMessage.counter();
+            var chainKey = getOrCreateChainKey(mac, remoteAddress, sessionState, theirEphemeral);
+            var messageKeys = getOrCreateMessageKeys(mac, sessionState, theirEphemeral, chainKey, counter);
+
+            ciphertextMessage.verifyMac(mac,
+                    sessionState.remoteIdentityPublic(),
+                    sessionState.localIdentityPublic(),
+                    messageKeys.macKey());
+
+            var plaintext = getPlaintext(messageKeys, ciphertextMessage.ciphertext());
+
+            sessionState.setPendingPreKey(null);
+
+            return plaintext;
+        }catch (GeneralSecurityException exception) {
+            throw new SignalDecryptException(exception);
         }
-
-        if (!Objects.equals(ciphertextMessage.version(), sessionState.sessionVersion())) {
-            throw new SecurityException(String.format("Message version %d, but session version %d",
-                    ciphertextMessage.version(),
-                    sessionState.sessionVersion()));
-        }
-
-        var theirEphemeral = ciphertextMessage.senderRatchetKey();
-        var counter = ciphertextMessage.counter();
-        var chainKey = getOrCreateChainKey(sessionState, theirEphemeral);
-        var messageKeys = getOrCreateMessageKeys(sessionState, theirEphemeral, chainKey, counter);
-
-        ciphertextMessage.verifyMac(sessionState.remoteIdentityPublic(),
-                sessionState.localIdentityPublic(),
-                messageKeys.macKey());
-
-        var plaintext = getPlaintext(messageKeys, ciphertextMessage.ciphertext());
-
-        sessionState.setPendingPreKey(null);
-
-        return plaintext;
     }
 
-    private SignalChainKey getOrCreateChainKey(SignalSessionState sessionState, SignalIdentityPublicKey theirEphemeral) {
+    private SignalChainKey getOrCreateChainKey(Mac mac, SignalProtocolAddress remoteAddress, SignalSessionState sessionState, SignalIdentityPublicKey theirEphemeral) {
         return sessionState.findReceiverChain(theirEphemeral)
                 .map(SignalSessionChain::chainKey)
                 .orElseGet(() -> {
-                    var hkdf = HKDF.of(sessionState.sessionVersion());
+                    var sessionVersion = sessionState.sessionVersion();
                     var rootKey = sessionState.rootKey();
                     var ourEphemeral = sessionState.senderChain()
-                            .orElseThrow(() -> new IllegalStateException("Uninitialized session!"))
+                            .orElseThrow(() -> new SignalUninitializedSessionException(remoteAddress))
                             .senderRatchetKeyPrivate();
-                    var receiverChain = rootKey.createChain(hkdf, mac, ourEphemeral, theirEphemeral);
+                    var receiverChain = rootKey.createChain(sessionVersion, mac, ourEphemeral, theirEphemeral);
                     var ourNewEphemeral = SignalIdentityKeyPair.random();
                     var senderChain = receiverChain.rootKey()
-                            .createChain(hkdf, mac, ourNewEphemeral.privateKey(), theirEphemeral);
+                            .createChain(sessionVersion, mac, ourNewEphemeral.privateKey(), theirEphemeral);
                     sessionState.setRootKey(senderChain.rootKey());
                     var sessionReceiverChain = new SignalSessionChainBuilder()
                             .senderRatchetKey(theirEphemeral)
@@ -261,70 +263,62 @@ public final class SignalSessionCipher {
                 });
     }
 
-    private SignalMessageKey getOrCreateMessageKeys(SignalSessionState sessionState,
-                                                    SignalIdentityPublicKey theirEphemeral,
-                                                    SignalChainKey chainKey, int counter) {
+    private SignalMessageKey getOrCreateMessageKeys(Mac mac, SignalSessionState sessionState, SignalIdentityPublicKey theirEphemeral, SignalChainKey chainKey, int counter) {
         var receiverChain = sessionState.findReceiverChain(theirEphemeral)
                 .orElseThrow(() -> new IllegalStateException("No receiver chain found"));
         if (chainKey.index() > counter) {
             return receiverChain.removeMessageKey(counter)
-                    .orElseThrow(() -> new SecurityException("Received message with old counter: " + chainKey.index() + " , " + counter));
+                    .orElseThrow(() -> new SignalDecryptException("Received message with old counter: " + chainKey.index() + " , " + counter));
         }
 
         if (counter - chainKey.index() > MAX_MESSAGE_KEYS) {
-            throw new SecurityException("Over " + MAX_MESSAGE_KEYS + " messages into the future!");
+            throw new SignalDecryptException("Over " + MAX_MESSAGE_KEYS + " messages into the future!");
         }
 
-        var hkdf = HKDF.of(sessionState.sessionVersion());
+        var sessionVersion = sessionState.sessionVersion();
         var currentChainKey = chainKey;
         while (currentChainKey.index() < counter) {
-            var messageKeys = currentChainKey.toMessageKeys(hkdf, mac);
+            var messageKeys = currentChainKey.toMessageKeys(sessionVersion, mac);
             receiverChain.addMessageKey(messageKeys);
             currentChainKey = currentChainKey.next(mac);
         }
 
         receiverChain.setChainKey(currentChainKey.next(mac));
-        return currentChainKey.toMessageKeys(hkdf, mac);
+        return currentChainKey.toMessageKeys(sessionVersion, mac);
     }
 
-    private byte[] getCiphertext(SignalMessageKey messageKeys, byte[] plaintext) {
-        try {
-            cipher.init(
-                    Cipher.ENCRYPT_MODE,
-                    messageKeys.cipherKey(),
-                    messageKeys.iv()
-            );
-            return cipher.doFinal(plaintext);
-        } catch (GeneralSecurityException e) {
-            throw new RuntimeException("Encryption failed", e);
-        }
+    private byte[] getCiphertext(SignalMessageKey messageKeys, byte[] plaintext) throws GeneralSecurityException {
+        var cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(
+                Cipher.ENCRYPT_MODE,
+                messageKeys.cipherKey(),
+                messageKeys.iv()
+        );
+        return cipher.doFinal(plaintext);
     }
 
-    private byte[] getPlaintext(SignalMessageKey messageKeys, byte[] cipherText) {
-        try {
-            cipher.init(
-                    Cipher.DECRYPT_MODE,
-                    messageKeys.cipherKey(),
-                    messageKeys.iv()
-            );
-            return cipher.doFinal(cipherText);
-        } catch (GeneralSecurityException e) {
-            throw new SecurityException("Decryption failed", e);
-        }
+    private byte[] getPlaintext(SignalMessageKey messageKeys, byte[] cipherText) throws GeneralSecurityException {
+        var cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(
+                Cipher.DECRYPT_MODE,
+                messageKeys.cipherKey(),
+                messageKeys.iv()
+        );
+        return cipher.doFinal(cipherText);
     }
 
     private OptionalInt process(SignalProtocolAddress remoteAddress, SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {
         var theirIdentityKey = message.identityKey();
         if (!store.isTrustedIdentity(remoteAddress, theirIdentityKey, SignalKeyDirection.INCOMING)) {
-            throw new SecurityException("The identity key of the incoming message is not trusted");
+            throw new SignalUntrustedIdentityException(remoteAddress);
         }
 
-        var unsignedPreKeyId = processV3(remoteAddress, sessionRecord, message);
+        var unsignedPreKeyId = processV3(sessionRecord, message);
         store.addTrustedIdentity(remoteAddress, theirIdentityKey);
         return unsignedPreKeyId;
     }
 
-    private OptionalInt processV3(SignalProtocolAddress remoteAddress, SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {
+    private OptionalInt processV3(SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {
         if (sessionRecord.hasSessionState(message.version(), message.baseKey().toSerialized())) {
             return OptionalInt.empty();
         }
@@ -348,7 +342,7 @@ public final class SignalSessionCipher {
             sessionRecord.archiveCurrentState();
         }
 
-        SignalRatchetingSession.initializeSession(mac, sessionRecord.sessionState(), parameters.build());
+        SignalRatchetingSession.initializeSession(sessionRecord.sessionState(), parameters.build());
 
         sessionRecord.sessionState()
                 .setLocalRegistrationId(store.registrationId());
@@ -362,7 +356,7 @@ public final class SignalSessionCipher {
 
     public void process(SignalProtocolAddress remoteAddress, SignalPreKeyBundle preKey) {
         if (!store.isTrustedIdentity(remoteAddress, preKey.identityKey(), SignalKeyDirection.OUTGOING)) {
-            throw new SecurityException("The identity key of the incoming message is not trusted");
+            throw new SignalUntrustedIdentityException(remoteAddress);
         }
 
         var theirSignedPreKey = preKey.signedPreKeyPublic();
@@ -396,7 +390,7 @@ public final class SignalSessionCipher {
             sessionRecord.archiveCurrentState();
         }
 
-        SignalRatchetingSession.initializeSession(mac, sessionRecord.sessionState(), parameters.build());
+        SignalRatchetingSession.initializeSession(sessionRecord.sessionState(), parameters.build());
 
         var pendingPreKey = new SignalPendingPreKeyBuilder()
                 .preKeyId(theirOneTimePreKeyId)

@@ -12,7 +12,6 @@ import com.github.auties00.libsignal.state.*;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.OptionalInt;
 
@@ -120,79 +119,35 @@ public final class SignalSessionCipher {
     }
 
     private byte[] decrypt(SignalProtocolAddress remoteAddress, SignalSessionRecord sessionRecord, SignalMessage ciphertext) {
-        var currentSessionState = sessionRecord.sessionState();
-        var currentSessionResult = tryDecrypt(remoteAddress, currentSessionState, ciphertext);
-        if(currentSessionResult != null) {
-            sessionRecord.setState(currentSessionState);
-            return currentSessionResult;
+        try {
+            var tempState = sessionRecord.sessionState().clone();
+            var result = decrypt(remoteAddress, tempState, ciphertext);
+            sessionRecord.setState(tempState);
+            return result;
+        } catch (Throwable _) {
+            var result = sessionRecord.previousSessionStates()
+                    .parallelStream()
+                    .map(promotedState -> tryDecrypt(remoteAddress, ciphertext, promotedState))
+                    .filter(entry -> entry != DecryptionPromotionResult.ERROR)
+                    .findFirst()
+                    .orElseThrow(() -> new SignalDecryptException("No valid sessions to decrypt message from " + remoteAddress));
+            sessionRecord.promoteState(result.state());
+            return result.data();
         }
-
-        for (var promotedState : sessionRecord.previousSessionStates()) {
-            var promotedStateResult = tryDecrypt(remoteAddress, promotedState, ciphertext);
-            if(promotedStateResult != null) {
-                sessionRecord.promoteState(promotedState);
-                return promotedStateResult;
-            }
-        }
-
-        throw new SignalDecryptException("No valid sessions to decrypt message from " + remoteAddress);
     }
 
-    private byte[] tryDecrypt(SignalProtocolAddress remoteAddress, SignalSessionState state, SignalMessage ciphertext) {
-        // Store all the data that could change
-        var savedSessionVersion = state.sessionVersion();
-        var savedLocalIdentityPublic = state.localIdentityPublic();
-        var savedRemoteIdentityPublic = state.remoteIdentityPublic();
-        var savedRootKey = state.rootKey();
-        var savedPreviousCounter = state.previousCounter();
-        var savedRemoteRegistrationId = state.remoteRegistrationId();
-        var savedLocalRegistrationId = state.localRegistrationId();
-        var savedNeedsRefresh = state.needsRefresh();
-        var savedPendingKeyExchange = state.pendingKeyExchange();
-        var savedPendingPreKey = state.pendingPreKey().orElse(null);
-        var savedBaseKey = state.baseKey() != null ? state.baseKey().clone() : null;
-        var savedSenderChain = state.senderChain().orElse(null);
-        var savedSenderChainKey = state.senderChain().map(SignalSessionChain::chainKey).orElse(null);
-        var savedReceiverChains = new ArrayList<SignalSessionChain>();
-        var savedReceiverChainKeys = new ArrayList<SignalChainKey>();
-        var savedReceiverChainsMessageKeys = new ArrayList<ArrayList<SignalMessageKey>>();
-        for (var chain : state.receiverChains()) {
-            savedReceiverChains.add(chain);
-            savedReceiverChainKeys.add(chain.chainKey());
-            savedReceiverChainsMessageKeys.add(new ArrayList<>(chain.messageKeys()));
-        }
-
+    private DecryptionPromotionResult tryDecrypt(SignalProtocolAddress remoteAddress, SignalMessage ciphertext, SignalSessionState promotedState) {
         try {
-            return decrypt(remoteAddress, state, ciphertext);
-        } catch (Throwable e) {
-            state.setSessionVersion(savedSessionVersion);
-            state.setLocalIdentityPublic(savedLocalIdentityPublic);
-            state.setRemoteIdentityPublic(savedRemoteIdentityPublic);
-            state.setRootKey(savedRootKey);
-            state.setPreviousCounter(savedPreviousCounter);
-            state.setRemoteRegistrationId(savedRemoteRegistrationId);
-            state.setLocalRegistrationId(savedLocalRegistrationId);
-            state.setNeedsRefresh(savedNeedsRefresh);
-            state.setPendingKeyExchange(savedPendingKeyExchange);
-            state.setPendingPreKey(savedPendingPreKey);
-            state.setBaseKey(savedBaseKey);
-            if (savedSenderChain != null) {
-                savedSenderChain.setChainKey(savedSenderChainKey);
-            }
-            state.setSenderChain(savedSenderChain);
-            var size = savedReceiverChains.size();
-            for (var i = 0; i < size; i++) {
-                var chain = savedReceiverChains.get(i);
-
-                var originalChainKey = savedReceiverChainKeys.get(i);
-                chain.setChainKey(originalChainKey);
-
-                var originalMessageKeysMap = savedReceiverChainsMessageKeys.get(i);
-                chain.setMessageKeys(originalMessageKeysMap);
-            }
-            state.setReceiverChains(savedReceiverChains);
-            return null;
+            var tempState = promotedState.clone();
+            var promotedStateResult = decrypt(remoteAddress, tempState, ciphertext);
+            return new DecryptionPromotionResult(tempState, promotedStateResult);
+        } catch (Throwable _) {
+            return DecryptionPromotionResult.ERROR;
         }
+    }
+
+    private record DecryptionPromotionResult(SignalSessionState state, byte[] data) {
+        private static final DecryptionPromotionResult ERROR = new DecryptionPromotionResult(null, null);
     }
 
     private byte[] decrypt(SignalProtocolAddress remoteAddress, SignalSessionState sessionState, SignalMessage ciphertextMessage) {

@@ -9,7 +9,7 @@ import it.auties.protobuf.model.ProtobufType;
 import java.util.*;
 
 @ProtobufMessage
-public final class SignalSessionState {
+public final class SignalSessionState implements Cloneable {
     private static final int DEFAULT_SESSION_VERSION = 2;
 
     @ProtobufProperty(index = 1, type = ProtobufType.UINT32)
@@ -184,6 +184,38 @@ public final class SignalSessionState {
         receiverChains.addAll(chains);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        return o == this || o instanceof SignalSessionState that
+                            && Objects.equals(sessionVersion, that.sessionVersion)
+                            && Objects.equals(remoteIdentityPublic, that.remoteIdentityPublic)
+                            && Objects.deepEquals(baseKey, that.baseKey);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(sessionVersion, remoteIdentityPublic.hashCode(), Arrays.hashCode(baseKey));
+    }
+
+    @Override
+    public SignalSessionState clone() {
+        return new SignalSessionState(
+                sessionVersion,
+                localIdentityPublic,
+                remoteIdentityPublic,
+                rootKey,
+                previousCounter,
+                senderChain.clone(),
+                new ReceiverChains(receiverChains),
+                pendingKeyExchange,
+                pendingPreKey,
+                remoteRegistrationId,
+                localRegistrationId,
+                needsRefresh,
+                baseKey
+        );
+    }
+
     static final class ReceiverChains extends AbstractCollection<SignalSessionChain> {
         private static final int MAX_RECEIVER_CHAINS = 5;
 
@@ -191,6 +223,13 @@ public final class SignalSessionState {
 
         public ReceiverChains() {
             this.backing = new LinkedHashMap<>(MAX_RECEIVER_CHAINS, 0.75F, true);
+        }
+
+        public ReceiverChains(ReceiverChains receiverChains) {
+            this.backing = new LinkedHashMap<>(MAX_RECEIVER_CHAINS, 0.75F, true);
+            for(var value : receiverChains.backing.sequencedValues()) {
+                backing.put(value.senderRatchetKey(), value.clone());
+            }
         }
 
         public Optional<SignalSessionChain> get(SignalIdentityPublicKey publicKey) {

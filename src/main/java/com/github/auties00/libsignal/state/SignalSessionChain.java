@@ -11,7 +11,7 @@ import it.auties.protobuf.model.ProtobufType;
 import java.util.*;
 
 @ProtobufMessage
-public final class SignalSessionChain {
+public final class SignalSessionChain implements Cloneable{
     @ProtobufProperty(index = 1, type = ProtobufType.BYTES)
     final SignalIdentityPublicKey senderRatchetKey;
 
@@ -68,6 +68,16 @@ public final class SignalSessionChain {
         this.messageKeys.addAll(messageKeys);
     }
 
+    @Override
+    public SignalSessionChain clone() {
+        return new SignalSessionChain(
+                senderRatchetKey,
+                senderRatchetKeyPrivate,
+                chainKey,
+                new MessageKeys(messageKeys)
+        );
+    }
+
     static final class MessageKeys extends AbstractCollection<SignalMessageKey> {
         private static final int MAX_MESSAGE_KEYS = 2000;
 
@@ -77,6 +87,9 @@ public final class SignalSessionChain {
             this.backing = new LinkedHashMap<>(MAX_MESSAGE_KEYS, 0.75F, true);
         }
 
+        public MessageKeys(MessageKeys messageKeys) {
+            this.backing = new LinkedHashMap<>(messageKeys.backing);
+        }
 
         public Optional<SignalMessageKey> remove(int index) {
             return Optional.ofNullable(backing.remove(index));

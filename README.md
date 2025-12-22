@@ -58,10 +58,3 @@ You can find the benchmark, alongside a log message of the run, in the [test dir
 | Decrypt ExtraLarge       | **313.49 ms** | 427.10 ms | 332.68 ms     |
 | Out-of-Order Decrypt     | **15.03 ms**  | 16.50 ms  | 8.60 ms       |
 | Message Key Limit Stress | **33.18 ms**  | 59.29 ms  | 91.52 ms      |
-
-### Key Takeaways
-
-- **35% faster** session encryption on average vs old Java implementation
-- **72% faster** message key limit stress test vs old Java implementation
-- **Pure Java** avoids JNI overhead that impacts Rust bindings performance
-- Consistent performance with low variance across all message sizes

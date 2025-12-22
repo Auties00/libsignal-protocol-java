@@ -1,5 +1,7 @@
-package com.github.auties00.libsignal;
+package com.github.auties00.libsignal.test;
 
+import com.github.auties00.libsignal.SignalProtocolAddress;
+import com.github.auties00.libsignal.SignalProtocolStore;
 import com.github.auties00.libsignal.groups.SignalSenderKeyName;
 import com.github.auties00.libsignal.groups.state.SignalSenderKeyRecord;
 import com.github.auties00.libsignal.key.*;

@@ -1,4 +1,4 @@
-package com.github.auties00.libsignal.kdf;
+package com.github.auties00.libsignal.test.kdf;
 
 import com.github.auties00.libsignal.util.HKDF;
 import org.junit.jupiter.api.Test;

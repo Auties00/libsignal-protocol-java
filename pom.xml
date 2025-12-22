@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.auties00</groupId>
     <artifactId>libsignal</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <name>${project.groupId}:${project.artifactId}</name>
     <description>A ratcheting forward secrecy protocol that works in synchronous and asynchronous messaging environments.</description>
     <url>https://github.com/Auties00/libsignal-java</url>

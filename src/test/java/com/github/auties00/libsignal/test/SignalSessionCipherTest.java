@@ -1,6 +1,9 @@
-package com.github.auties00.libsignal;
+package com.github.auties00.libsignal.test;
 
 import com.github.auties00.curve25519.Curve25519;
+import com.github.auties00.libsignal.SignalProtocolAddress;
+import com.github.auties00.libsignal.SignalProtocolStore;
+import com.github.auties00.libsignal.SignalSessionCipher;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import com.github.auties00.libsignal.key.SignalPreKeyPairBuilder;

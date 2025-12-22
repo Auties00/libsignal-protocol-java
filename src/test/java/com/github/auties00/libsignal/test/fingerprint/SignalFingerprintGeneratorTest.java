@@ -1,5 +1,7 @@
-package com.github.auties00.libsignal.fingerprint;
+package com.github.auties00.libsignal.test.fingerprint;
 
+import com.github.auties00.libsignal.fingerprint.SignalCombinedFingerprintSpec;
+import com.github.auties00.libsignal.fingerprint.SignalFingerprintGenerator;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import org.junit.jupiter.api.Test;

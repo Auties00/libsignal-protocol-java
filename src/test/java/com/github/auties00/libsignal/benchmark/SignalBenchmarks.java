@@ -4,7 +4,7 @@
  Remember to run with --enable-native-access=ALL-UNNAMED
  */
 
-package com.github.auties00.libsignal;
+package com.github.auties00.libsignal.benchmark;
 
 // New Java lib imports
 
@@ -13,6 +13,8 @@ import archived.org.whispersystems.libsignal.groups.SenderKeyName;
 import archived.org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import archived.org.whispersystems.libsignal.groups.state.SenderKeyStore;
 import com.github.auties00.curve25519.Curve25519;
+import com.github.auties00.libsignal.SignalProtocolAddress;
+import com.github.auties00.libsignal.SignalSessionCipher;
 import com.github.auties00.libsignal.groups.SignalGroupCipher;
 import com.github.auties00.libsignal.groups.SignalSenderKeyName;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
@@ -22,6 +24,7 @@ import com.github.auties00.libsignal.protocol.SignalCiphertextMessage;
 import com.github.auties00.libsignal.protocol.SignalMessage;
 import com.github.auties00.libsignal.protocol.SignalPreKeyMessage;
 import com.github.auties00.libsignal.state.SignalPreKeyBundle;
+import com.github.auties00.libsignal.test.InMemorySignalProtocolStore;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.signal.libsignal.protocol.IdentityKeyPair;

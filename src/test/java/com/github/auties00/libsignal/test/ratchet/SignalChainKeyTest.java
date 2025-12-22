@@ -1,5 +1,6 @@
-package com.github.auties00.libsignal.ratchet;
+package com.github.auties00.libsignal.test.ratchet;
 
+import com.github.auties00.libsignal.ratchet.SignalChainKeyBuilder;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.Mac;

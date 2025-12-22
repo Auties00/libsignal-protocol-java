@@ -1,8 +1,12 @@
-package com.github.auties00.libsignal.ratchet;
+package com.github.auties00.libsignal.test.ratchet;
 
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
+import com.github.auties00.libsignal.ratchet.SignalAliceParametersBuilder;
+import com.github.auties00.libsignal.ratchet.SignalBobParametersBuilder;
+import com.github.auties00.libsignal.ratchet.SignalChainKey;
+import com.github.auties00.libsignal.ratchet.SignalRatchetingSession;
 import com.github.auties00.libsignal.state.SignalSessionChain;
 import com.github.auties00.libsignal.state.SignalSessionState;
 import org.junit.jupiter.api.Test;

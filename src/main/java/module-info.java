@@ -12,4 +12,5 @@ module com.github.auties00.libsignal {
     exports com.github.auties00.libsignal.protocol;
     exports com.github.auties00.libsignal.ratchet;
     exports com.github.auties00.libsignal.state;
+    exports com.github.auties00.libsignal.exception;
 }

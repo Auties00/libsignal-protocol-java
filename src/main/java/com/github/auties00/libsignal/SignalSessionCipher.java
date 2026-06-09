@@ -39,7 +39,7 @@ public final class SignalSessionCipher {
             var senderEphemeral = sessionChain.senderRatchetKey();
             var previousCounter = sessionState.previousCounter();
 
-            var ciphertextBody = getCiphertext(messageKeys, paddedMessage);
+            var ciphertextBody = cipher(Cipher.ENCRYPT_MODE, messageKeys, paddedMessage);
             SignalCiphertextMessage ciphertextMessage = new SignalMessageBuilder()
                     .hmacSha256(mac)
                     .version(sessionVersion)
@@ -174,7 +174,7 @@ public final class SignalSessionCipher {
                     sessionState.localIdentityPublic(),
                     messageKeys.macKey());
 
-            var plaintext = getPlaintext(messageKeys, ciphertextMessage.ciphertext());
+            var plaintext = cipher(Cipher.DECRYPT_MODE, messageKeys, ciphertextMessage.ciphertext());
 
             sessionState.setPendingPreKey(null);
 
@@ -242,24 +242,14 @@ public final class SignalSessionCipher {
         return currentChainKey.toMessageKeys(sessionVersion, mac);
     }
 
-    private byte[] getCiphertext(SignalMessageKey messageKeys, byte[] plaintext) throws GeneralSecurityException {
+    private byte[] cipher(int mode, SignalMessageKey messageKeys, byte[] text) throws GeneralSecurityException {
         var cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(
-                Cipher.ENCRYPT_MODE,
+                mode,
                 messageKeys.cipherKey(),
                 messageKeys.iv()
         );
-        return cipher.doFinal(plaintext);
-    }
-
-    private byte[] getPlaintext(SignalMessageKey messageKeys, byte[] cipherText) throws GeneralSecurityException {
-        var cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(
-                Cipher.DECRYPT_MODE,
-                messageKeys.cipherKey(),
-                messageKeys.iv()
-        );
-        return cipher.doFinal(cipherText);
+        return cipher.doFinal(text);
     }
 
     private OptionalInt process(SignalProtocolAddress remoteAddress, SignalSessionRecord sessionRecord, SignalPreKeyMessage message) {

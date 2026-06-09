@@ -43,20 +43,14 @@ public final class SignalGroupCipher {
 
     public SignalCiphertextMessage encrypt(SignalSenderKeyName senderKeyId, byte[] paddedPlaintext) {
         try {
-            var mac = Mac.getInstance("HmacSHA256");
-
             var senderKeyState = store.findSenderKeyByName(senderKeyId)
                     .orElseThrow(() -> new SignalMissingSenderKeyException(senderKeyId))
                     .findSenderKeyState()
                     .orElseThrow(() -> new SignalMissingSenderKeyStateException(senderKeyId));
-
             var senderKey = senderKeyState.senderChainKey();
-
+            var mac = Mac.getInstance("HmacSHA256");
             var messageKeys = senderKey.toSenderMessageKey(mac);
-
-            var cipher = createCipher(mac, messageKeys, Cipher.ENCRYPT_MODE);
-            var ciphertext = cipher.doFinal(paddedPlaintext);
-
+            var ciphertext = cipher(Cipher.ENCRYPT_MODE, mac, messageKeys, paddedPlaintext);
             var senderKeyMessage = new SignalSenderKeyMessageBuilder()
                     .version(SignalCiphertextMessage.CURRENT_VERSION)
                     .id(senderKeyState.id())
@@ -64,10 +58,8 @@ public final class SignalGroupCipher {
                     .cipherText(ciphertext)
                     .signaturePrivateKey(senderKeyState.signatureKey().privateKey())
                     .build();
-
             var nextSenderChainKey = senderKey.next(mac);
             senderKeyState.setSenderChainKey(nextSenderChainKey);
-
             return senderKeyMessage;
         } catch (GeneralSecurityException exception) {
             throw new SignalEncryptException(exception);
@@ -77,7 +69,6 @@ public final class SignalGroupCipher {
     public byte[] decrypt(SignalSenderKeyName senderKeyId, byte[] senderKeyMessageBytes) {
         try {
             var mac = Mac.getInstance("HmacSHA256");
-
             var record = store.findSenderKeyByName(senderKeyId)
                     .orElseThrow(() -> new SignalMissingSenderKeyException(senderKeyId));
             var senderKeyMessage = SignalSenderKeyMessage.ofSerialized(senderKeyMessageBytes);
@@ -86,23 +77,20 @@ public final class SignalGroupCipher {
             if (!senderKeyMessage.verifySignature(senderKeyState.signatureKey().publicKey())) {
                 throw new SignalDecryptException("Invalid signature!");
             }
-
             var senderKey = getSenderKey(mac, senderKeyState, senderKeyMessage.iteration());
-
-            var cipher = createCipher(mac, senderKey, Cipher.DECRYPT_MODE);
-            return cipher.doFinal(senderKeyMessage.cipherText());
+            return cipher(Cipher.DECRYPT_MODE, mac, senderKey, senderKeyMessage.cipherText());
         } catch (GeneralSecurityException exception) {
             throw new SignalDecryptException(exception);
         }
     }
 
-    private Cipher createCipher(Mac mac, SignalSenderMessageKey messageKeys, int mode) throws GeneralSecurityException {
+    private byte[] cipher(int mode, Mac mac, SignalSenderMessageKey messageKeys, byte[] text) throws GeneralSecurityException {
         var chunks = HKDF.deriveSecrets(SignalCiphertextMessage.CURRENT_VERSION, mac, messageKeys.seed(), GROUP_INFO, 48);
         var iv = new IvParameterSpec(chunks, 0, 16);
         var cipherKey = new SecretKeySpec(chunks, 16, 32, "AES");
         var cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(mode, cipherKey, iv);
-        return cipher;
+        return cipher.doFinal(text);
     }
 
     private SignalSenderMessageKey getSenderKey(Mac mac, SignalSenderKeyState senderKeyState, int iteration) throws NoSuchAlgorithmException {

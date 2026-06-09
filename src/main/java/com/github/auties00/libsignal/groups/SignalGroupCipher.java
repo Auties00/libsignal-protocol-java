@@ -2,6 +2,7 @@ package com.github.auties00.libsignal.groups;
 
 import com.github.auties00.libsignal.SignalProtocolStore;
 import com.github.auties00.libsignal.exception.SignalDecryptException;
+import com.github.auties00.libsignal.exception.SignalDuplicateMessageException;
 import com.github.auties00.libsignal.exception.SignalEncryptException;
 import com.github.auties00.libsignal.exception.SignalMissingSenderKeyException;
 import com.github.auties00.libsignal.exception.SignalMissingSenderKeyStateException;
@@ -99,7 +100,7 @@ public final class SignalGroupCipher {
 
         if (currentSenderChainKey > iteration) {
             return senderKeyState.removeMessageKey(iteration)
-                    .orElseThrow(() -> new SignalDecryptException("Received message with old counter: " + currentSenderChainKey + " , " + iteration));
+                    .orElseThrow(() -> new SignalDuplicateMessageException(currentSenderChainKey, iteration));
         }
 
         if (iteration - currentSenderChainKey > MAX_MESSAGE_KEYS) {

@@ -119,21 +119,26 @@ public final class SignalSessionCipher {
     }
 
     private byte[] decrypt(SignalProtocolAddress remoteAddress, SignalSessionRecord sessionRecord, SignalMessage ciphertext) {
+        SignalException currentStateException;
         try {
             var tempState = sessionRecord.sessionState().clone();
             var result = decrypt(remoteAddress, tempState, ciphertext);
             sessionRecord.setState(tempState);
             return result;
-        } catch (Throwable _) {
-            var result = sessionRecord.previousSessionStates()
-                    .parallelStream()
-                    .map(promotedState -> tryDecrypt(remoteAddress, ciphertext, promotedState))
-                    .filter(entry -> entry != DecryptionPromotionResult.ERROR)
-                    .findFirst()
-                    .orElseThrow(() -> new SignalDecryptException("No valid sessions to decrypt message from " + remoteAddress));
-            sessionRecord.promoteState(result.state());
-            return result.data();
+        } catch (SignalDuplicateMessageException exception) {
+            throw exception;
+        } catch (SignalException exception) {
+            currentStateException = exception;
         }
+
+        var result = sessionRecord.previousSessionStates()
+                .parallelStream()
+                .map(promotedState -> tryDecrypt(remoteAddress, ciphertext, promotedState))
+                .filter(entry -> entry != DecryptionPromotionResult.ERROR)
+                .findFirst()
+                .orElseThrow(() -> new SignalDecryptException("No valid sessions to decrypt message from " + remoteAddress, currentStateException));
+        sessionRecord.promoteState(result.state());
+        return result.data();
     }
 
     private DecryptionPromotionResult tryDecrypt(SignalProtocolAddress remoteAddress, SignalMessage ciphertext, SignalSessionState promotedState) {
@@ -141,7 +146,7 @@ public final class SignalSessionCipher {
             var tempState = promotedState.clone();
             var promotedStateResult = decrypt(remoteAddress, tempState, ciphertext);
             return new DecryptionPromotionResult(tempState, promotedStateResult);
-        } catch (Throwable _) {
+        } catch (SignalException _) {
             return DecryptionPromotionResult.ERROR;
         }
     }
@@ -220,10 +225,10 @@ public final class SignalSessionCipher {
 
     private SignalMessageKey getOrCreateMessageKeys(Mac mac, SignalSessionState sessionState, SignalIdentityPublicKey theirEphemeral, SignalChainKey chainKey, int counter) {
         var receiverChain = sessionState.findReceiverChain(theirEphemeral)
-                .orElseThrow(() -> new IllegalStateException("No receiver chain found"));
+                .orElseThrow(() -> new SignalMissingReceiverChainException(theirEphemeral));
         if (chainKey.index() > counter) {
             return receiverChain.removeMessageKey(counter)
-                    .orElseThrow(() -> new SignalDecryptException("Received message with old counter: " + chainKey.index() + " , " + counter));
+                    .orElseThrow(() -> new SignalDuplicateMessageException(chainKey.index(), counter));
         }
 
         if (counter - chainKey.index() > MAX_MESSAGE_KEYS) {
@@ -269,7 +274,7 @@ public final class SignalSessionCipher {
         }
 
         var ourSignedPreKey = store.findSignedPreKeyById(message.signedPreKeyId())
-                .orElseThrow(() -> new IllegalStateException("No signed prekey found with id " + message.signedPreKeyId()));
+                .orElseThrow(() -> new SignalMissingSignedPreKeyException(message.signedPreKeyId()));
         var parameters = new SignalBobParametersBuilder()
                 .theirBaseKey(message.baseKey())
                 .theirIdentityKey(message.identityKey())
@@ -279,7 +284,7 @@ public final class SignalSessionCipher {
 
         message.preKeyId().ifPresent(preKeyId -> {
             var preKey = store.findPreKeyById(preKeyId)
-                    .orElseThrow(() -> new IllegalStateException("No prekey found with id " + preKeyId));
+                    .orElseThrow(() -> new SignalMissingPreKeyException(preKeyId));
             parameters.ourOneTimePreKey(preKey.keyPair());
         });
 
@@ -305,14 +310,14 @@ public final class SignalSessionCipher {
         }
 
         var theirSignedPreKey = preKey.signedPreKeyPublic();
-        if (preKey.signedPreKeyPublic() == null) {
-            throw new SecurityException("No signed prekey!");
+        if (theirSignedPreKey == null) {
+            throw new SignalSessionInitializationException("No signed prekey in bundle");
         }
 
         if (!Curve25519.verifySignature(preKey.identityKey().toEncodedPoint(),
                 theirSignedPreKey.toSerialized(),
                 preKey.signedPreKeySignature())) {
-            throw new SecurityException("Invalid signature on device key!");
+            throw new SignalInvalidSignatureException("Invalid signature on device key");
         }
 
         var sessionRecord = store.findSessionByAddress(remoteAddress)

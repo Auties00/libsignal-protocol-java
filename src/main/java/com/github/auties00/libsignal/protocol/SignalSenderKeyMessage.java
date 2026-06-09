@@ -1,6 +1,7 @@
 package com.github.auties00.libsignal.protocol;
 
 import com.github.auties00.curve25519.Curve25519;
+import com.github.auties00.libsignal.exception.SignalMalformedMessageException;
 import com.github.auties00.libsignal.key.SignalIdentityPrivateKey;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import it.auties.protobuf.annotation.ProtobufBuilder;
@@ -50,12 +51,21 @@ public final class SignalSenderKeyMessage extends SignalCiphertextMessage {
     }
 
     public static SignalSenderKeyMessage ofSerialized(byte[] serialized) {
-        var signature = Arrays.copyOfRange(serialized, serialized.length - SIGNATURE_LENGTH, serialized.length);
-        var result = SignalSenderKeyMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1 - SIGNATURE_LENGTH));
-        result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
-        result.signature = signature;
-        result.serialized = serialized;
-        return result;
+        try {
+            var signature = Arrays.copyOfRange(serialized, serialized.length - SIGNATURE_LENGTH, serialized.length);
+            var result = SignalSenderKeyMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1 - SIGNATURE_LENGTH));
+            if (result.id == null || result.iteration == null || result.cipherText == null) {
+                throw new SignalMalformedMessageException("Incomplete message");
+            }
+            result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
+            result.signature = signature;
+            result.serialized = serialized;
+            return result;
+        } catch (SignalMalformedMessageException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new SignalMalformedMessageException(exception);
+        }
     }
 
     @Override

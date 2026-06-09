@@ -4,6 +4,8 @@ import com.github.auties00.curve25519.Curve25519;
 import com.github.auties00.libsignal.devices.SignalDeviceConsistencyCommitment;
 import com.github.auties00.libsignal.devices.SignalDeviceConsistencySignature;
 import com.github.auties00.libsignal.devices.SignalDeviceConsistencySignatureBuilder;
+import com.github.auties00.libsignal.exception.SignalInvalidSignatureException;
+import com.github.auties00.libsignal.exception.SignalMalformedMessageException;
 import com.github.auties00.libsignal.key.SignalIdentityKeyPair;
 import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
@@ -45,15 +47,24 @@ public final class SignalDeviceConsistencyMessage extends SignalPlaintextMessage
         }
     }
 
-    public static SignalDeviceConsistencyMessage ofSerialized(byte[] serialized, SignalDeviceConsistencyCommitment commitment, SignalIdentityKeyPair identityKey) throws SignatureException {
-        var message = SignalDeviceConsistencyMessageSpec.decode(serialized);
-        var vrfOutputBytes = Curve25519.verifyVrfSignature(identityKey.publicKey().toEncodedPoint(), commitment.toSerialized(), message.signature);
-        message.signatureMessage = new SignalDeviceConsistencySignatureBuilder()
-                .signature(message.signature)
-                .vrfOutput(vrfOutputBytes)
-                .build();
-        message.serialized = serialized;
-        return message;
+    public static SignalDeviceConsistencyMessage ofSerialized(byte[] serialized, SignalDeviceConsistencyCommitment commitment, SignalIdentityKeyPair identityKey) {
+        SignalDeviceConsistencyMessage message;
+        try {
+            message = SignalDeviceConsistencyMessageSpec.decode(serialized);
+        } catch (RuntimeException exception) {
+            throw new SignalMalformedMessageException(exception);
+        }
+        try {
+            var vrfOutputBytes = Curve25519.verifyVrfSignature(identityKey.publicKey().toEncodedPoint(), commitment.toSerialized(), message.signature);
+            message.signatureMessage = new SignalDeviceConsistencySignatureBuilder()
+                    .signature(message.signature)
+                    .vrfOutput(vrfOutputBytes)
+                    .build();
+            message.serialized = serialized;
+            return message;
+        } catch (SignatureException exception) {
+            throw new SignalInvalidSignatureException(exception);
+        }
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.github.auties00.libsignal.protocol;
 
+import com.github.auties00.libsignal.exception.SignalMalformedMessageException;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
@@ -54,10 +55,19 @@ public final class SignalPreKeyMessage extends SignalCiphertextMessage {
     }
 
     public static SignalPreKeyMessage ofSerialized(byte[] serialized) {
-        var result = SignalPreKeyMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1));
-        result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
-        result.serialized = serialized;
-        return result;
+        try {
+            var result = SignalPreKeyMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1));
+            if (result.baseKey == null || result.identityKey == null || result.serializedSignalMessage == null || result.signedPreKeyId == null) {
+                throw new SignalMalformedMessageException("Incomplete message");
+            }
+            result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
+            result.serialized = serialized;
+            return result;
+        } catch (SignalMalformedMessageException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new SignalMalformedMessageException(exception);
+        }
     }
 
     @Override

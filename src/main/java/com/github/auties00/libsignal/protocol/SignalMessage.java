@@ -1,5 +1,7 @@
 package com.github.auties00.libsignal.protocol;
 
+import com.github.auties00.libsignal.exception.SignalDecryptException;
+import com.github.auties00.libsignal.exception.SignalMalformedMessageException;
 import com.github.auties00.libsignal.key.SignalIdentityPublicKey;
 import it.auties.protobuf.annotation.ProtobufBuilder;
 import it.auties.protobuf.annotation.ProtobufMessage;
@@ -56,12 +58,21 @@ public final class SignalMessage extends SignalCiphertextMessage {
     }
 
     public static SignalMessage ofSerialized(byte[] serialized) {
-        var mac = Arrays.copyOfRange(serialized, serialized.length - MAC_LENGTH, serialized.length);
-        var result = SignalMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1 - MAC_LENGTH));
-        result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
-        result.mac = mac;
-        result.serialized = serialized;
-        return result;
+        try {
+            var mac = Arrays.copyOfRange(serialized, serialized.length - MAC_LENGTH, serialized.length);
+            var result = SignalMessageSpec.decode(ProtobufInputStream.fromBytes(serialized, 1, serialized.length - 1 - MAC_LENGTH));
+            if (result.senderRatchetKey == null || result.counter == null || result.ciphertext == null) {
+                throw new SignalMalformedMessageException("Incomplete message");
+            }
+            result.version = Byte.toUnsignedInt(serialized[0]) >> 4;
+            result.mac = mac;
+            result.serialized = serialized;
+            return result;
+        } catch (SignalMalformedMessageException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new SignalMalformedMessageException(exception);
+        }
     }
 
     @Override
@@ -106,7 +117,7 @@ public final class SignalMessage extends SignalCiphertextMessage {
         var theirMac = mac;
         var ourMac = getMac(hmacSha256, macKey, senderIdentityPublicKey, receiverIdentityPublicKey);
         if (!MessageDigest.isEqual(theirMac, ourMac)) {
-            throw new SecurityException("Bad Mac!");
+            throw new SignalDecryptException("Bad Mac!");
         }
     }
 
